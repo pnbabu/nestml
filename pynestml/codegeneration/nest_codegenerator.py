@@ -904,7 +904,7 @@ class NESTCodeGenerator(CodeGenerator):
         :param neurons: a list of neurons
         :type neurons: list(ASTNeuron)
         """
-        namespace = self._get_module_namespace(neurons)
+        namespace = self._get_module_namespace(neurons, synapses)
         if not os.path.exists(FrontendConfiguration.get_target_path()):
             os.makedirs(FrontendConfiguration.get_target_path())
 
@@ -923,13 +923,14 @@ class NESTCodeGenerator(CodeGenerator):
         code, message = Messages.get_module_generated(FrontendConfiguration.get_target_path())
         Logger.log_message(None, code, message, None, LoggingLevel.INFO)
 
-    def _get_module_namespace(self, neurons: List[ASTNeuron]) -> Dict:
+    def _get_module_namespace(self, neurons: List[ASTNeuron], synapses: List[ASTSynapse]) -> Dict:
         """
         Creates a namespace for generating NEST extension module code
         :param neurons: List of neurons
         :return: a context dictionary for rendering templates
         """
         namespace = {'neurons': neurons,
+                     'synapses': synapses,
                      'moduleName': FrontendConfiguration.get_module_name(),
                      'now': datetime.datetime.utcnow()}
         return namespace
@@ -1295,16 +1296,6 @@ class NESTCodeGenerator(CodeGenerator):
             with open(str(os.path.join(FrontendConfiguration.get_target_path(),
                                        synapse.get_name())) + '.' + file_extension, 'w+') as f:
                 f.write(str(_file))
-
-    # def generate_synapse_h_file(self, synapse):
-    #     # type: (ASTsynapse) -> None
-    #     """
-    #     For a handed over synapse, this method generates the corresponding header file.
-    #     :param synapse: a single synapse object.
-    #     """
-    #     synapse_h_file = self._template_synapse_h_file.render(self.setup_synapse_generation_helpers(synapse))
-    #     with open(str(os.path.join(FrontendConfiguration.get_target_path(), synapse.get_name())) + '.h', 'w+') as f:
-    #         f.write(str(synapse_h_file))
 
     def _get_synapse_model_namespace(self, synapse: ASTSynapse) -> Dict:
         """
