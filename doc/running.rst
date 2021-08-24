@@ -128,6 +128,7 @@ The default directory can be changed through ``--codegen_opts`` by providing a p
 
 .. code-block:: bash
    nestml --input_path models/iaf_psc_exp.nestml --codegen_opts /home/nest/work/codegen_options.json
+
 An example ``codegen_options.json`` file is as follows:
 
 .. code-block:: json
@@ -135,14 +136,19 @@ An example ``codegen_options.json`` file is as follows:
         "templates":
         {
             "path": "/home/nest/work/custom_templates",
-            "model_templates": ["NeuronClass.cpp.jinja2", "NeuronHeader.h.jinja2"],
+            "model_templates": {
+                "neuron": ['NeuronClass.cpp.jinja2', 'NeuronHeader.h.jinja2'],
+                "synapse": ['SynapseHeader.h.jinja2']
+            },
             "module_templates": ["setup/CMakeLists.txt.jinja2",
                                  "setup/ModuleHeader.h.jinja2","setup/ModuleClass.cpp.jinja2"]
         }
    }
+
 The ``templates`` option in the JSON file contains information on the custom jinja templates to be used for code generation.
 * The ``path`` option indicates the root directory of the custom jinja templates.
-* The ``model_templates`` option indicates the names of the jinja templates for neuron model(s) or relative path to a directory containing the neuron model(s) templates.
+* The ``model_templates`` option indicates a list of the jinja templates or a relative path to a directory containing the neuron and synapse model templates.
+The neuron model templates are provided using the ``neuron`` sub-option and synapse templates using the ``synapse`` sub-option.
 * The ``module_templates`` option indicates the names or relative path to a directory containing the jinja templates used to build a NEST extension module.
 
 The ``codegen_opts`` can also be passed to the PyNESTML function ``to_nest`` as follows:
@@ -153,7 +159,10 @@ The ``codegen_opts`` can also be passed to the PyNESTML function ``to_nest`` as 
         "templates":
         {
             "path": "/home/nest/work/custom_templates",
-            "model_templates": ["NeuronClass.cpp.jinja2", "NeuronHeader.h.jinja2"]
+            "model_templates": {
+                "neuron": ['NeuronClass.cpp.jinja2', 'NeuronHeader.h.jinja2'],
+                "synapse": ['SynapseHeader.h.jinja2']
+            },
             "module_templates": ["setup"]
         }
    }
