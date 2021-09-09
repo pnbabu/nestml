@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# nest_loops_integration_test.py
+# nest_multithreading_test.py
 #
 # This file is part of NEST.
 #
