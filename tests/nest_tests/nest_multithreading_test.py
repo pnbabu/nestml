@@ -41,8 +41,8 @@ class NestMultithreadingTest(unittest.TestCase):
         install_nest(target_path, nest_path)
 
         nest.Install(module_name)
-        nest.SetKernelStatus({"local_num_threads": 2})
-        neurons = nest.Create('iaf_psc_exp_nestml', 2)
+        nest.SetKernelStatus({"local_num_threads": 15})
+        neurons = nest.Create('iaf_psc_exp_nestml', 15)
         st = list(nest.GetStatus(neurons, 'vp'))
         print(st)
         mm = nest.Create('multimeter', {"record_from": ["V_abs"]})
