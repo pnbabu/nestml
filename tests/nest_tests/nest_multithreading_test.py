@@ -24,6 +24,7 @@ import unittest
 from pynestml.frontend.pynestml_frontend import to_nest, install_nest
 import nest
 
+
 class NestMultithreadingTest(unittest.TestCase):
 
     def test_nest_multithreading(self):
