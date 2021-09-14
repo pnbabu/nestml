@@ -18,8 +18,11 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
-from pynestml.meta_model.ast_node import ASTNode
 
+from typing import List, Optional
+
+from pynestml.meta_model.ast_node import ASTNode
+from pynestml.meta_model.ast_on_receive_block import ASTOnReceiveBlock
 
 class ASTSynapseBody(ASTNode):
     """
@@ -132,18 +135,18 @@ class ASTSynapseBody(ASTNode):
                 ret.append(elem)
         return ret
 
-    def get_pre_receive(self):
-        from pynestml.meta_model.ast_pre_receive import ASTPreReceive
+    def get_on_receive_block(self, port_name) -> Optional[ASTOnReceiveBlock]:
         for elem in self.get_body_elements():
-            if isinstance(elem, ASTPreReceive):
+            if isinstance(elem, ASTOnReceiveBlock) and elem.port_name == port_name:
                 return elem
+        return None
 
-    def get_post_receive(self):
-        from pynestml.meta_model.ast_post_receive import ASTPostReceive
+    def get_on_receive_blocks(self) -> List[ASTOnReceiveBlock]:
+        on_receive_blocks = []
         for elem in self.get_body_elements():
-            if isinstance(elem, ASTPostReceive):
-                return elem
-
+            if isinstance(elem, ASTOnReceiveBlock):
+                on_receive_blocks.append(elem)
+        return on_receive_blocks
 
     def get_equations_blocks(self):
         """
