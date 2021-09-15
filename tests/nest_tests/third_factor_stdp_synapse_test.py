@@ -112,7 +112,9 @@ class NestThirdFactorSTDPSynapseTest(unittest.TestCase):
         nest.set_verbosity("M_ALL")
         nest.ResetKernel()
         nest.Install("nestml_jit_module")
-        nest.Install("nestml_non_jit_module")
+
+        if sim_ref:
+            nest.Install("nestml_non_jit_module")
 
         print("Pre spike times: " + str(pre_spike_times))
         print("Post spike times: " + str(post_spike_times))
