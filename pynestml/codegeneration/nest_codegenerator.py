@@ -637,7 +637,6 @@ class NESTCodeGenerator(CodeGenerator):
                 Logger.log_message(None, -1, "Moving onPost updates for " + str(state_var), None, LoggingLevel.INFO)
                 post_port_names = self.get_post_port_names(synapse, neuron.name, synapse.name)
 
-                assert len(post_port_names) <= 1, "Can only handle one \"post\" port"
                 if len(post_port_names)  == 0:
                     continue
                 post_port_name = post_port_names[0]
