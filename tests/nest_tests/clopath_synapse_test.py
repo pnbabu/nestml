@@ -28,7 +28,7 @@ def run_simulation(neuron_model_name, synapse_model_name, module_name, _pre_spik
 
     multimeter_pre = nest.Create('multimeter')
     multimeter_post = nest.Create('multimeter',
-                                  params={"record_from": "u_bar_plus"})
+                                  params={"record_from": "u_bar_plus__for_clopath_nestml"})
 
     nest.Connect(neurons[0], neurons[1], syn_spec={'synapse_model': synapse_model_name + "_rec"})
     nest.Connect(pre_sg, neurons[0], "one_to_one", syn_spec={"delay": 1.})
@@ -43,7 +43,7 @@ def run_simulation(neuron_model_name, synapse_model_name, module_name, _pre_spik
     # Record u_bar_plus
     events_post = nest.GetStatus(multimeter_post, 'events')[0]
     times_post = events_post['times']
-    u_bar_plus = events_post['u_bar_plus']
+    u_bar_plus = events_post['u_bar_plus__for_clopath_nestml']
 
     print(u_bar_plus)
 
