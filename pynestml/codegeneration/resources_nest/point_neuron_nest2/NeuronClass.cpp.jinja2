@@ -1,5 +1,5 @@
 {#-
-NeuronHeader.h.jinja2
+NeuronClass.cpp.jinja2
 
 This file is part of NEST.
 
@@ -19,4 +19,6 @@ You should have received a copy of the GNU General Public License
 along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 #}
 
-{%- include "common/NeuronHeader.jinja2" %}
+#define NEST2_COMPAT    1
+
+{%- include "common/NeuronClass.jinja2" %}
