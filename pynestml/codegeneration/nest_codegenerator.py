@@ -30,8 +30,7 @@ from jinja2 import Environment, FileSystemLoader, TemplateRuntimeError, Template
 from odetoolbox import analysis
 
 import pynestml
-
-from pynestml.codegeneration.ast_transformers import add_declarations_to_internals, add_declaration_to_state_block, declaration_in_state_block, is_delta_kernel, replace_rhs_variables, construct_kernel_X_spike_buf_name, get_expr_from_kernel_var, to_ode_toolbox_name, to_ode_toolbox_processed_name, get_kernel_var_order_from_ode_toolbox_result, get_initial_value_from_ode_toolbox_result, variable_in_kernels, is_ode_variable, variable_in_solver, recursive_dependent_variables_search, get_input_port_by_name, collect_variable_names_in_expression, get_eq_declarations_from_block
+from pynestml.codegeneration.ast_transformers import ASTTransformers
 from pynestml.codegeneration.codegenerator import CodeGenerator
 from pynestml.codegeneration.expressions_pretty_printer import ExpressionsPrettyPrinter
 from pynestml.codegeneration.gsl_names_converter import GSLNamesConverter
@@ -173,7 +172,7 @@ class NESTCodeGenerator(CodeGenerator):
         # Environment for neuron templates
         env = Environment(loader=FileSystemLoader(_template_dirs))
         env.globals['raise'] = self.raise_helper
-        env.globals["is_delta_kernel"] = is_delta_kernel
+        env.globals["is_delta_kernel"] = ASTTransformers.is_delta_kernel
 
         # Load all the templates
         _templates = list()
@@ -245,7 +244,10 @@ class NESTCodeGenerator(CodeGenerator):
         return False
 
     def is_special_port(self, special_type: str, port_name: str, neuron_name: str, synapse_name: str) -> bool:
-        """Check if a port by the given name is specified as connecting to the postsynaptic neuron. Only makes sense for synapses."""
+        """
+        Check if a port by the given name is specified as connecting to the postsynaptic neuron. Only makes sense
+        for synapses.
+        """
         assert special_type in ["post", "vt"]
         if not "neuron_synapse_pairs" in self._options.keys():
             return False
@@ -293,7 +295,9 @@ class NESTCodeGenerator(CodeGenerator):
         return post_port_names
 
     def get_neuron_var_name_from_syn_port_name(self, port_name: str, neuron_name: str, synapse_name: str) -> Optional[str]:
-        """Check if a port by the given name is specified as connecting to the postsynaptic neuron. Only makes sense for synapses."""
+        """
+        Check if a port by the given name is specified as connecting to the postsynaptic neuron. Only makes sense for synapses.
+        """
         if not "neuron_synapse_pairs" in self._options.keys():
             return False
 
@@ -361,7 +365,7 @@ class NESTCodeGenerator(CodeGenerator):
                 if func_name == 'convolve':
                     symbol_buffer = node.get_scope().resolve_to_symbol(str(node.get_args()[1]),
                                                                        SymbolKind.VARIABLE)
-                    input_port = get_input_port_by_name(self.parent_node.get_input_blocks(), symbol_buffer.name)
+                    input_port = ASTTransformers.get_input_port_by_name(self.parent_node.get_input_blocks(), symbol_buffer.name)
                     if input_port:
                         found_parent_assignment = False
                         node_ = node
@@ -416,7 +420,7 @@ class NESTCodeGenerator(CodeGenerator):
                 if func_name == 'convolve':
                     symbol_buffer = node.get_scope().resolve_to_symbol(str(node.get_args()[1]),
                                                                        SymbolKind.VARIABLE)
-                    input_port = get_input_port_by_name(self.parent_node.get_input_blocks(), symbol_buffer.name)
+                    input_port = ASTTransformers.get_input_port_by_name(self.parent_node.get_input_blocks(), symbol_buffer.name)
                     if input_port and not self.codegen_class.is_post_port(input_port.name, neuron_name, synapse_name):
                         found_parent_assignment = False
                         node_ = node
@@ -487,7 +491,7 @@ class NESTCodeGenerator(CodeGenerator):
             Logger.log_message(None, -1, "--> State variables that will be moved from synapse to neuron: " + str(syn_to_neuron_state_vars), None, LoggingLevel.INFO)
 
             #   collect all the variable/parameter/kernel/function/etc. names used in defining expressions of `syn_to_neuron_state_vars`
-            recursive_vars_used = recursive_dependent_variables_search(syn_to_neuron_state_vars, synapse)
+            recursive_vars_used = ASTTransformers.recursive_dependent_variables_search(syn_to_neuron_state_vars, synapse)
             Logger.log_message(None, -1, "recursive dependent variables search yielded the following new variables: " + str(recursive_vars_used), None, LoggingLevel.INFO)
 
 
@@ -533,7 +537,7 @@ class NESTCodeGenerator(CodeGenerator):
                     Logger.log_message(None, -1, "Moving state var definition of " + state_var + " from synapse to neuron", None, LoggingLevel.INFO)
                     for decl in decls:
                         if decl.has_expression():
-                            vars_used.extend(collect_variable_names_in_expression(decl.get_expression()))
+                            vars_used.extend(ASTTransformers.collect_variable_names_in_expression(decl.get_expression()))
                         synapse_block.declarations.remove(decl)
                         add_suffix_to_variable_names(decl, suffix=var_name_suffix)
                         neuron_block.get_declarations().append(decl)
@@ -557,19 +561,19 @@ class NESTCodeGenerator(CodeGenerator):
 
                 assert mode in ["move", "copy"]
 
-                decls = get_eq_declarations_from_block(state_var, synapse_block)
+                decls = ASTTransformers.get_eq_declarations_from_block(state_var, synapse_block)
 
                 if decls:
                     # print("\tvar = " + str(state_var) + " from synapse block to neuron")
                     for decl in decls:
                         if (type(decl) in [ASTDeclaration, ASTReturnStmt] and decl.has_expression()) \
                            or type(decl) is ASTInlineExpression:
-                            vars_used.extend(collect_variable_names_in_expression(decl.get_expression()))
+                            vars_used.extend(ASTTransformers.collect_variable_names_in_expression(decl.get_expression()))
                         elif type(decl) is ASTOdeEquation:
-                            vars_used.extend(collect_variable_names_in_expression(decl.get_rhs()))
+                            vars_used.extend(ASTTransformers.collect_variable_names_in_expression(decl.get_rhs()))
                         elif type(decl) is ASTKernel:
                             for expr in decl.get_expressions():
-                                vars_used.extend(collect_variable_names_in_expression(expr))
+                                vars_used.extend(ASTTransformers.collect_variable_names_in_expression(expr))
                         else:
                             raise Exception("Tried to move unknown type " + str(type(decl)))
 
@@ -660,7 +664,7 @@ class NESTCodeGenerator(CodeGenerator):
 
                 assert mode in ["move", "copy"]
 
-                decls = get_eq_declarations_from_block(state_var, synapse_block)
+                decls = ASTTransformers.get_eq_declarations_from_block(state_var, synapse_block)
 
                 for decl in decls:
                     if mode == "move":
@@ -680,8 +684,8 @@ class NESTCodeGenerator(CodeGenerator):
 
             def get_statements_from_block(var_name, block):
                 """XXX: only simple statements such as assignments are supported for now. if..then..else compound statements and so are not yet supported."""
-                block = block.get_block()
                 all_stmts = block.get_stmts()
+                block = block.get_block()
                 stmts = []
                 for node in all_stmts:
                     if node.is_small_stmt() \
@@ -699,7 +703,7 @@ class NESTCodeGenerator(CodeGenerator):
                 if stmts:
                     Logger.log_message(None, -1, "Moving state var updates for " + state_var + " from synapse to neuron", None, LoggingLevel.INFO)
                     for stmt in stmts:
-                        vars_used.extend(collect_variable_names_in_expression(stmt))
+                        vars_used.extend(ASTTransformers.collect_variable_names_in_expression(stmt))
                         synapse_block.get_block().stmts.remove(stmt)
                         add_suffix_to_variable_names(stmt, suffix=var_name_suffix)
                         neuron_block.get_block().stmts.append(stmt)
@@ -723,7 +727,7 @@ class NESTCodeGenerator(CodeGenerator):
                     if stmts:
                         Logger.log_message(None, -1, "Moving state var updates for " + state_var + " from synapse to neuron", None, LoggingLevel.INFO)
                         for stmt in stmts:
-                            vars_used.extend(collect_variable_names_in_expression(stmt))
+                            vars_used.extend(ASTTransformers.collect_variable_names_in_expression(stmt))
                             post_receive_block.block.stmts.remove(stmt)
                             add_suffix_to_variable_names(stmt, suffix=var_name_suffix)
 #                            neuron_block.get_block().stmts.append(stmt)
@@ -858,7 +862,7 @@ class NESTCodeGenerator(CodeGenerator):
 
                 assert mode in ["move", "copy"]
 
-                decls = get_eq_declarations_from_block(state_var, synapse_block)
+                decls = ASTTransformers.get_eq_declarations_from_block(state_var, synapse_block)
 
                 for decl in decls:
                     if mode == "move":
@@ -1017,7 +1021,7 @@ class NESTCodeGenerator(CodeGenerator):
                 assert len(
                     conv_call.args) == 2, "convolve() function call should have precisely two arguments: kernel and spike input port"
                 kernel = conv_call.args[0]
-                if is_delta_kernel(neuron.get_kernel_by_name(kernel.get_variable().get_name())):
+                if ASTTransformers.is_delta_kernel(neuron.get_kernel_by_name(kernel.get_variable().get_name())):
                     inport = conv_call.args[1].get_variable()
                     expr_str = str(expr)
                     sympy_expr = sympy.parsing.sympy_parser.parse_expr(expr_str)
@@ -1099,16 +1103,16 @@ class NESTCodeGenerator(CodeGenerator):
         def replace_var(_expr=None):
             if isinstance(_expr, ASTSimpleExpression) and _expr.is_variable():
                 var = _expr.get_variable()
-                if variable_in_solver(to_ode_toolbox_processed_name(var.get_complete_name()), solver_dicts):
-                    ast_variable = ASTVariable(to_ode_toolbox_processed_name(
+                if ASTTransformers.variable_in_solver(ASTTransformers.to_ode_toolbox_processed_name(var.get_complete_name()), solver_dicts):
+                    ast_variable = ASTVariable(ASTTransformers.to_ode_toolbox_processed_name(
                         var.get_complete_name()), differential_order=0)
                     ast_variable.set_source_position(var.get_source_position())
                     _expr.set_variable(ast_variable)
 
             elif isinstance(_expr, ASTVariable):
                 var = _expr
-                if variable_in_solver(to_ode_toolbox_processed_name(var.get_complete_name()), solver_dicts):
-                    var.set_name(to_ode_toolbox_processed_name(var.get_complete_name()))
+                if ASTTransformers.variable_in_solver(ASTTransformers.to_ode_toolbox_processed_name(var.get_complete_name()), solver_dicts):
+                    var.set_name(ASTTransformers.to_ode_toolbox_processed_name(var.get_complete_name()))
                     var.set_differential_order(0)
 
         def func(x):
@@ -1135,9 +1139,9 @@ class NESTCodeGenerator(CodeGenerator):
                 kernel = neuron.get_kernel_by_name(var.get_name())
 
                 _expr.set_function_call(None)
-                buffer_var = construct_kernel_X_spike_buf_name(
+                buffer_var = ASTTransformers.construct_kernel_X_spike_buf_name(
                     var.get_name(), spike_input_port, var.get_differential_order() - 1)
-                if is_delta_kernel(kernel):
+                if ASTTransformers.is_delta_kernel(kernel):
                     # delta kernels are treated separately, and should be kept out of the dynamics (computing derivates etc.) --> set to zero
                     _expr.set_variable(None)
                     _expr.set_numeric_literal(0)
@@ -1220,7 +1224,7 @@ class NESTCodeGenerator(CodeGenerator):
         self.add_timestep_symbol(neuron)
 
         if self.analytic_solver[neuron.get_name()] is not None:
-            neuron = add_declarations_to_internals(neuron, self.analytic_solver[neuron.get_name()]["propagators"])
+            neuron = ASTTransformers.add_declarations_to_internals(neuron, self.analytic_solver[neuron.get_name()]["propagators"])
 
         self.update_symbol_table(neuron, kernel_buffers)
         spike_updates, post_spike_updates = self.get_spike_update_expressions(
@@ -1287,7 +1291,7 @@ class NESTCodeGenerator(CodeGenerator):
 
             if not self.analytic_solver[synapse.get_name()] is None:
                 # print("NEST codegenerator: Adding propagators...")
-                synapse = add_declarations_to_internals(synapse, self.analytic_solver[synapse.get_name()]["propagators"])
+                synapse = ASTTransformers.add_declarations_to_internals(synapse, self.analytic_solver[synapse.get_name()]["propagators"])
 
             self.update_symbol_table(synapse, kernel_buffers)
             # self.remove_kernel_definitions_from_equations_block(synapse, self.analytic_solver["state_variables"])
@@ -1391,7 +1395,7 @@ class NESTCodeGenerator(CodeGenerator):
         for post_port_name in namespace["post_ports"]:
             if synapse.get_input_blocks() \
                     and synapse.get_input_blocks().get_input_ports() \
-                    and get_input_port_by_name(synapse.get_input_blocks(), post_port_name).is_spike():
+                    and ASTTransformers.get_input_port_by_name(synapse.get_input_blocks(), post_port_name).is_spike():
                 spiking_post_port = post_port_name
                 break
         if spiking_post_port:
@@ -1560,7 +1564,7 @@ class NESTCodeGenerator(CodeGenerator):
 
         # convert variables from ASTVariable instances to strings
         _names = self.non_equations_state_variables[neuron.get_name()]
-        _names = [to_ode_toolbox_processed_name(var.get_complete_name()) for var in _names]
+        _names = [ASTTransformers.to_ode_toolbox_processed_name(var.get_complete_name()) for var in _names]
         namespace['non_equations_state_variables'] = _names
 
         namespace['uses_numeric_solver'] = neuron.get_name() in self.numeric_solver.keys() \
@@ -1613,10 +1617,16 @@ class NESTCodeGenerator(CodeGenerator):
             namespace['printer'] = NestPrinter(unitless_pretty_printer)
         namespace["spike_updates"] = neuron.spike_updates
 
-        namespace["recordable_state_variables"] = [sym for sym in neuron.get_state_symbols() if namespace['declarations'].get_domain_from_type(sym.get_type_symbol()) == "double" and sym.is_recordable and not is_delta_kernel(neuron.get_kernel_by_name(sym.name))]
-        namespace["recordable_inline_expressions"] = [sym for sym in neuron.get_inline_expression_symbols() if namespace['declarations'].get_domain_from_type(sym.get_type_symbol()) == "double" and sym.is_recordable]
+        namespace["recordable_state_variables"] = [sym for sym in neuron.get_state_symbols()
+                                                   if namespace['declarations'].get_domain_from_type(sym.get_type_symbol()) == "double"
+                                                   and sym.is_recordable and not ASTTransformers.is_delta_kernel(neuron.get_kernel_by_name(sym.name))]
+        namespace["recordable_inline_expressions"] = [sym for sym in neuron.get_inline_expression_symbols()
+                                                      if namespace['declarations'].get_domain_from_type(sym.get_type_symbol()) == "double"
+                                                      and sym.is_recordable]
 
-        namespace["parameter_syms_with_iv"] = [sym for sym in neuron.get_parameter_symbols() if sym.has_declaring_expression() and (not neuron.get_kernel_by_name(sym.name))]
+        namespace["parameter_syms_with_iv"] = [sym for sym in neuron.get_parameter_symbols()
+                                               if sym.has_declaring_expression()
+                                               and (not neuron.get_kernel_by_name(sym.name))]
 
         rng_visitor = ASTRandomNumberGeneratorVisitor()
         neuron.accept(rng_visitor)
@@ -1723,16 +1733,16 @@ class NESTCodeGenerator(CodeGenerator):
         for iv_decl in neuron.get_state_blocks().get_declarations():
             for var in iv_decl.get_variables():
                 var_name = var.get_complete_name()
-                if is_ode_variable(var.get_name(), neuron):
-                    assert variable_in_solver(to_ode_toolbox_processed_name(var_name), solver_dicts)
+                if ASTTransformers.is_ode_variable(var.get_name(), neuron):
+                    assert ASTTransformers.variable_in_solver(ASTTransformers.to_ode_toolbox_processed_name(var_name), solver_dicts)
 
                     # replace the left-hand side variable name by the ode-toolbox format
-                    var.set_name(to_ode_toolbox_processed_name(var.get_complete_name()))
+                    var.set_name(ASTTransformers.to_ode_toolbox_processed_name(var.get_complete_name()))
                     var.set_differential_order(0)
 
                     # replace the defining expression by the ode-toolbox result
-                    iv_expr = get_initial_value_from_ode_toolbox_result(
-                        to_ode_toolbox_processed_name(var_name), solver_dicts)
+                    iv_expr = ASTTransformers.get_initial_value_from_ode_toolbox_result(
+                        ASTTransformers.to_ode_toolbox_processed_name(var_name), solver_dicts)
                     assert iv_expr is not None
                     iv_expr = ModelParser.parse_expression(iv_expr)
                     iv_expr.update_scope(neuron.get_state_blocks().get_scope())
@@ -1756,9 +1766,9 @@ class NESTCodeGenerator(CodeGenerator):
             if solver_dict is None:
                 continue
             for var_name in solver_dict["initial_values"].keys():
-                if variable_in_kernels(var_name, kernels):
+                if ASTTransformers.variable_in_kernels(var_name, kernels):
                     # original initial value expressions should have been removed to make place for ode-toolbox results
-                    assert not declaration_in_state_block(neuron, var_name)
+                    assert not ASTTransformers.declaration_in_state_block(neuron, var_name)
 
         for solver_dict in solver_dicts:
             if solver_dict is None:
@@ -1766,10 +1776,10 @@ class NESTCodeGenerator(CodeGenerator):
 
             for var_name, expr in solver_dict["initial_values"].items():
                 # here, overwrite is allowed because initial values might be repeated between numeric and analytic solver
-                if variable_in_kernels(var_name, kernels):
+                if ASTTransformers.variable_in_kernels(var_name, kernels):
                     expr = "0"    # for kernels, "initial value" returned by ode-toolbox is actually the increment value; the actual initial value is assumed to be 0
-                    if not declaration_in_state_block(neuron, var_name):
-                        add_declaration_to_state_block(neuron, var_name, expr)
+                    if not ASTTransformers.declaration_in_state_block(neuron, var_name):
+                        ASTTransformers.add_declaration_to_state_block(neuron, var_name, expr)
 
     def create_initial_values_for_ode_toolbox_odes(self, neuron, solver_dicts, kernel_buffers, kernels):
         """
@@ -1780,7 +1790,7 @@ class NESTCodeGenerator(CodeGenerator):
                 continue
             for var_name in solver_dict["initial_values"].keys():
                 # original initial value expressions should have been removed to make place for ode-toolbox results
-                assert not declaration_in_state_block(neuron, var_name)
+                assert not ASTTransformers.declaration_in_state_block(neuron, var_name)
 
         for solver_dict in solver_dicts:
             if solver_dict is None:
@@ -1789,11 +1799,11 @@ class NESTCodeGenerator(CodeGenerator):
             for var_name, expr in solver_dict["initial_values"].items():
                 # here, overwrite is allowed because initial values might be repeated between numeric and analytic solver
 
-                if variable_in_kernels(var_name, kernels):
+                if ASTTransformers.variable_in_kernels(var_name, kernels):
                     expr = "0"    # for kernels, "initial value" returned by ode-toolbox is actually the increment value; the actual initial value is assumed to be 0
 
-                if not declaration_in_state_block(neuron, var_name):
-                    add_declaration_to_state_block(neuron, var_name, expr)
+                if not ASTTransformers.declaration_in_state_block(neuron, var_name):
+                    ASTTransformers.add_declaration_to_state_block(neuron, var_name, expr)
 
 
     def get_spike_update_expressions(self, neuron: ASTNeuron, kernel_buffers, solver_dicts, delta_factors) -> List[ASTAssignment]:
@@ -1808,7 +1818,7 @@ class NESTCodeGenerator(CodeGenerator):
         post_spike_updates = {}
 
         for kernel, spike_input_port in kernel_buffers:
-            if is_delta_kernel(kernel):
+            if ASTTransformers.is_delta_kernel(kernel):
                 continue
 
             '''if neuron.get_scope().resolve_to_symbol(str(spike_input_port), SymbolKind.VARIABLE) is None:
@@ -1832,10 +1842,10 @@ class NESTCodeGenerator(CodeGenerator):
             assert not buffer_type is None
 
             for kernel_var in kernel.get_variables():
-                for var_order in range(get_kernel_var_order_from_ode_toolbox_result(kernel_var.get_name(), solver_dicts)):
-                    kernel_spike_buf_name = construct_kernel_X_spike_buf_name(
+                for var_order in range(ASTTransformers.get_kernel_var_order_from_ode_toolbox_result(kernel_var.get_name(), solver_dicts)):
+                    kernel_spike_buf_name = ASTTransformers.construct_kernel_X_spike_buf_name(
                         kernel_var.get_name(), spike_input_port, var_order)
-                    expr = get_initial_value_from_ode_toolbox_result(kernel_spike_buf_name, solver_dicts)
+                    expr = ASTTransformers.get_initial_value_from_ode_toolbox_result(kernel_spike_buf_name, solver_dicts)
                     assert expr is not None, "Initial value not found for kernel " + kernel_var
                     expr = str(expr)
                     if expr in ["0", "0.", "0.0"]:
@@ -1934,7 +1944,7 @@ class NESTCodeGenerator(CodeGenerator):
         equations_block = neuron.get_equations_block()
         for equation in equations_block.get_ode_equations():
             # n.b. includes single quotation marks to indicate differential order
-            lhs = to_ode_toolbox_name(equation.get_lhs().get_complete_name())
+            lhs = ASTTransformers.to_ode_toolbox_name(equation.get_lhs().get_complete_name())
             rhs = gsl_printer.print_expression(equation.get_rhs())
             entry = {"expression": lhs + " = " + rhs}
             symbol_name = equation.get_lhs().get_name()
@@ -1947,23 +1957,23 @@ class NESTCodeGenerator(CodeGenerator):
                 initial_value_expr = neuron.get_initial_value(iv_symbol_name)
                 if initial_value_expr:
                     expr = gsl_printer.print_expression(initial_value_expr)
-                    entry["initial_values"][to_ode_toolbox_name(iv_symbol_name)] = expr
+                    entry["initial_values"][ASTTransformers.to_ode_toolbox_name(iv_symbol_name)] = expr
             odetoolbox_indict["dynamics"].append(entry)
 
         # write a copy for each (kernel, spike buffer) combination
         for kernel, spike_input_port in kernel_buffers:
 
-            if is_delta_kernel(kernel):
+            if ASTTransformers.is_delta_kernel(kernel):
                 # delta function -- skip passing this to ode-toolbox
                 continue
 
             for kernel_var in kernel.get_variables():
-                expr = get_expr_from_kernel_var(kernel, kernel_var.get_complete_name())
+                expr = ASTTransformers.get_expr_from_kernel_var(kernel, kernel_var.get_complete_name())
                 kernel_order = kernel_var.get_differential_order()
-                kernel_X_spike_buf_name_ticks = construct_kernel_X_spike_buf_name(
+                kernel_X_spike_buf_name_ticks = ASTTransformers.construct_kernel_X_spike_buf_name(
                     kernel_var.get_name(), spike_input_port, kernel_order, diff_order_symbol="'")
 
-                replace_rhs_variables(expr, kernel_buffers)
+                ASTTransformers.replace_rhs_variables(expr, kernel_buffers)
 
                 entry = {}
                 entry["expression"] = kernel_X_spike_buf_name_ticks + " = " + str(expr)
@@ -1971,7 +1981,7 @@ class NESTCodeGenerator(CodeGenerator):
                 # initial values need to be declared for order 1 up to kernel order (e.g. none for kernel function f(t) = ...; 1 for kernel ODE f'(t) = ...; 2 for f''(t) = ... and so on)
                 entry["initial_values"] = {}
                 for order in range(kernel_order):
-                    iv_sym_name_ode_toolbox = construct_kernel_X_spike_buf_name(
+                    iv_sym_name_ode_toolbox = ASTTransformers.construct_kernel_X_spike_buf_name(
                         kernel_var.get_name(), spike_input_port, order, diff_order_symbol="'")
                     symbol_name_ = kernel_var.get_name() + "'" * order
                     symbol = equations_block.get_scope().resolve_to_symbol(symbol_name_, SymbolKind.VARIABLE)
