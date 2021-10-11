@@ -21,9 +21,14 @@
 
 import re
 
-from typing import List, Mapping
+from typing import List, Mapping, Union
 
 from pynestml.codegeneration.expressions_pretty_printer import ExpressionsPrettyPrinter
+from pynestml.meta_model.ast_block import ASTBlock
+from pynestml.meta_model.ast_block_with_variables import ASTBlockWithVariables
+from pynestml.meta_model.ast_input_block import ASTInputBlock
+from pynestml.meta_model.ast_input_port import ASTInputPort
+from pynestml.meta_model.ast_node import ASTNode
 from pynestml.symbols.variable_symbol import BlockType
 from pynestml.meta_model.ast_assignment import ASTAssignment
 from pynestml.meta_model.ast_declaration import ASTDeclaration
@@ -46,454 +51,493 @@ from pynestml.visitors.ast_higher_order_visitor import ASTHigherOrderVisitor
 from pynestml.visitors.ast_symbol_table_visitor import ASTSymbolTableVisitor
 
 
-def add_declarations_to_internals(neuron: ASTNeuron, declarations: Mapping[str, str]) -> ASTNeuron:
-    """
-    Adds the variables as stored in the declaration tuples to the neuron.
-    :param neuron: a single neuron instance
-    :param declarations: a map of variable names to declarations
-    :return: a modified neuron
-    """
-    for variable in declarations:
-        add_declaration_to_internals(neuron, variable, declarations[variable])
-    return neuron
+class ASTTransformers:
 
+    @classmethod
+    def add_declarations_to_internals(cls, neuron: ASTNeuron, declarations: Mapping[str, str]) -> ASTNeuron:
+        """
+        Adds the variables as stored in the declaration tuples to the neuron.
+        :param neuron: a single neuron instance
+        :param declarations: a map of variable names to declarations
+        :return: a modified neuron
+        """
+        for variable in declarations:
+            cls.add_declaration_to_internals(neuron, variable, declarations[variable])
+        return neuron
 
-def add_declaration_to_internals(neuron: ASTNeuron, variable_name: str, init_expression: str) -> ASTNeuron:
-    """
-    Adds the variable as stored in the declaration tuple to the neuron. The declared variable is of type real.
-    :param neuron: a single neuron instance
-    :param variable_name: the name of the variable to add
-    :param init_expression: initialization expression
-    :return: the neuron extended by the variable
-    """
-    tmp = ModelParser.parse_expression(init_expression)
-    vector_variable = ASTUtils.get_vectorized_variable(tmp, neuron.get_scope())
+    @classmethod
+    def add_declaration_to_internals(cls, neuron: ASTNeuron, variable_name: str, init_expression: str) -> ASTNeuron:
+        """
+        Adds the variable as stored in the declaration tuple to the neuron. The declared variable is of type real.
+        :param neuron: a single neuron instance
+        :param variable_name: the name of the variable to add
+        :param init_expression: initialization expression
+        :return: the neuron extended by the variable
+        """
+        tmp = ModelParser.parse_expression(init_expression)
+        vector_variable = ASTUtils.get_vectorized_variable(tmp, neuron.get_scope())
 
-    declaration_string = variable_name + ' real' + (
-        '[' + vector_variable.get_vector_parameter() + ']'
-        if vector_variable is not None and vector_variable.has_vector_parameter() else '') + ' = ' + init_expression
-    ast_declaration = ModelParser.parse_declaration(declaration_string)
-    if vector_variable is not None:
-        ast_declaration.set_size_parameter(vector_variable.get_vector_parameter())
-    neuron.add_to_internal_block(ast_declaration)
-    ast_declaration.update_scope(neuron.get_internals_blocks().get_scope())
-    symtable_visitor = ASTSymbolTableVisitor()
-    symtable_visitor.block_type_stack.push(BlockType.INTERNALS)
-    ast_declaration.accept(symtable_visitor)
-    symtable_visitor.block_type_stack.pop()
-    return neuron
+        declaration_string = variable_name + ' real' + (
+            '[' + vector_variable.get_vector_parameter() + ']'
+            if vector_variable is not None and vector_variable.has_vector_parameter() else '') + ' = ' + init_expression
+        ast_declaration = ModelParser.parse_declaration(declaration_string)
+        if vector_variable is not None:
+            ast_declaration.set_size_parameter(vector_variable.get_vector_parameter())
+        neuron.add_to_internal_block(ast_declaration)
+        ast_declaration.update_scope(neuron.get_internals_blocks().get_scope())
+        symtable_visitor = ASTSymbolTableVisitor()
+        symtable_visitor.block_type_stack.push(BlockType.INTERNALS)
+        ast_declaration.accept(symtable_visitor)
+        symtable_visitor.block_type_stack.pop()
+        return neuron
 
+    @classmethod
+    def add_declarations_to_state_block(cls, neuron: ASTNeuron, variables: List, initial_values: List) -> ASTNeuron:
+        """
+        Adds a single declaration to the state block of the neuron.
+        :param neuron: a neuron
+        :param variables: list of variables
+        :param initial_values: list of initial values
+        :return: a modified neuron
+        """
+        for variable, initial_value in zip(variables, initial_values):
+            cls.add_declaration_to_state_block(neuron, variable, initial_value)
+        return neuron
 
-def add_declarations_to_state_block(neuron: ASTNeuron, variables: List, initial_values: List) -> ASTNeuron:
-    """
-    Adds a single declaration to the state block of the neuron.
-    :param neuron: a neuron
-    :param variables: list of variables
-    :param initial_values: list of initial values
-    :return: a modified neuron
-    """
-    for variable, initial_value in zip(variables, initial_values):
-        add_declaration_to_state_block(neuron, variable, initial_value)
-    return neuron
+    @classmethod
+    def add_declaration_to_state_block(cls, neuron: ASTNeuron, variable: str, initial_value: str) -> ASTNeuron:
+        """
+        Adds a single declaration to the state block of the neuron. The declared variable is of type real.
+        :param neuron: a neuron
+        :param variable: state variable to add
+        :param initial_value: corresponding initial value
+        :return: a modified neuron
+        """
+        tmp = ModelParser.parse_expression(initial_value)
+        vector_variable = ASTUtils.get_vectorized_variable(tmp, neuron.get_scope())
+        declaration_string = variable + ' real' + (
+            '[' + vector_variable.get_vector_parameter() + ']'
+            if vector_variable is not None and vector_variable.has_vector_parameter() else '') + ' = ' + initial_value
+        ast_declaration = ModelParser.parse_declaration(declaration_string)
+        if vector_variable is not None:
+            ast_declaration.set_size_parameter(vector_variable.get_vector_parameter())
+        neuron.add_to_state_block(ast_declaration)
+        ast_declaration.update_scope(neuron.get_state_blocks().get_scope())
 
+        symtable_visitor = ASTSymbolTableVisitor()
+        symtable_visitor.block_type_stack.push(BlockType.STATE)
+        ast_declaration.accept(symtable_visitor)
+        symtable_visitor.block_type_stack.pop()
 
-def add_declaration_to_state_block(neuron: ASTNeuron, variable: str, initial_value: str) -> ASTNeuron:
-    """
-    Adds a single declaration to the state block of the neuron. The declared variable is of type real.
-    :param neuron: a neuron
-    :param variable: state variable to add
-    :param initial_value: corresponding initial value
-    :return: a modified neuron
-    """
-    tmp = ModelParser.parse_expression(initial_value)
-    vector_variable = ASTUtils.get_vectorized_variable(tmp, neuron.get_scope())
-    declaration_string = variable + ' real' + (
-        '[' + vector_variable.get_vector_parameter() + ']'
-        if vector_variable is not None and vector_variable.has_vector_parameter() else '') + ' = ' + initial_value
-    ast_declaration = ModelParser.parse_declaration(declaration_string)
-    if vector_variable is not None:
-        ast_declaration.set_size_parameter(vector_variable.get_vector_parameter())
-    neuron.add_to_state_block(ast_declaration)
-    ast_declaration.update_scope(neuron.get_state_blocks().get_scope())
+        return neuron
 
-    symtable_visitor = ASTSymbolTableVisitor()
-    symtable_visitor.block_type_stack.push(BlockType.STATE)
-    ast_declaration.accept(symtable_visitor)
-    symtable_visitor.block_type_stack.pop()
+    @classmethod
+    def declaration_in_state_block(cls, neuron: ASTNeuron, variable_name: str) -> bool:
+        """
+        Checks if the variable is declared in the state block
+        :param neuron:
+        :param variable_name:
+        :return:
+        """
+        assert type(variable_name) is str
 
-    return neuron
+        if neuron.get_state_blocks() is None:
+            return False
 
+        for decl in neuron.get_state_blocks().get_declarations():
+            for var in decl.get_variables():
+                if var.get_complete_name() == variable_name:
+                    return True
 
-def declaration_in_state_block(neuron: ASTNeuron, variable_name: str) -> bool:
-    """
-    Checks if the variable is declared in the state block
-    :param neuron:
-    :param variable_name:
-    :return:
-    """
-    assert type(variable_name) is str
-
-    if neuron.get_state_blocks() is None:
         return False
 
-    for decl in neuron.get_state_blocks().get_declarations():
-        for var in decl.get_variables():
-            if var.get_complete_name() == variable_name:
+    @classmethod
+    def add_assignment_to_update_block(cls, assignment: ASTAssignment, neuron: ASTNeuron) -> ASTNeuron:
+        """
+        Adds a single assignment to the end of the update block of the handed over neuron.
+        :param assignment: a single assignment
+        :param neuron: a single neuron instance
+        :return: the modified neuron
+        """
+        small_stmt = ASTNodeFactory.create_ast_small_stmt(assignment=assignment,
+                                                          source_position=ASTSourceLocation.get_added_source_position())
+        stmt = ASTNodeFactory.create_ast_stmt(small_stmt=small_stmt,
+                                              source_position=ASTSourceLocation.get_added_source_position())
+        if not neuron.get_update_blocks():
+            neuron.create_empty_update_block()
+        neuron.get_update_blocks().get_block().get_stmts().append(stmt)
+        small_stmt.update_scope(neuron.get_update_blocks().get_block().get_scope())
+        stmt.update_scope(neuron.get_update_blocks().get_block().get_scope())
+        return neuron
+
+    @classmethod
+    def add_declaration_to_update_block(cls, declaration: ASTDeclaration, neuron: ASTNeuron) -> ASTNeuron:
+        """
+        Adds a single declaration to the end of the update block of the handed over neuron.
+        :param declaration: ASTDeclaration node to add
+        :param neuron: a single neuron instance
+        :return: a modified neuron
+        """
+        small_stmt = ASTNodeFactory.create_ast_small_stmt(declaration=declaration,
+                                                          source_position=ASTSourceLocation.get_added_source_position())
+        stmt = ASTNodeFactory.create_ast_stmt(small_stmt=small_stmt,
+                                              source_position=ASTSourceLocation.get_added_source_position())
+        if not neuron.get_update_blocks():
+            neuron.create_empty_update_block()
+        neuron.get_update_blocks().get_block().get_stmts().append(stmt)
+        small_stmt.update_scope(neuron.get_update_blocks().get_block().get_scope())
+        stmt.update_scope(neuron.get_update_blocks().get_block().get_scope())
+        return neuron
+
+    @classmethod
+    def add_state_updates(cls, neuron: ASTNeuron, update_expressions: Mapping[str, str]) -> ASTNeuron:
+        """
+        Adds all update instructions as contained in the solver output to the update block of the neuron.
+        :param neuron: a single neuron
+        :param update_expressions: map of variables to corresponding updates during the update step.
+        :return: a modified version of the neuron
+        """
+        for variable, update_expression in update_expressions.items():
+            declaration_statement = variable + '__tmp real = ' + update_expression
+            cls.add_declaration_to_update_block(ModelParser.parse_declaration(declaration_statement), neuron)
+        for variable, update_expression in update_expressions.items():
+            cls.add_assignment_to_update_block(ModelParser.parse_assignment(variable + ' = ' + variable + '__tmp'),
+                                               neuron)
+        return neuron
+
+    @classmethod
+    def variable_in_solver(cls, kernel_var: str, solver_dicts: List[dict]) -> bool:
+        """
+        Check if a variable by this name is defined in the ode-toolbox solver results,
+        """
+
+        for solver_dict in solver_dicts:
+            if solver_dict is None:
+                continue
+
+            for var_name in solver_dict["state_variables"]:
+                var_name_base = var_name.split("__X__")[0]
+                if var_name_base == kernel_var:
+                    return True
+
+        return False
+
+    @classmethod
+    def is_ode_variable(cls, var_base_name: str, neuron: ASTNeuron) -> bool:
+        """
+        Checks if the variable is present in an ODE
+        """
+        equations_block = neuron.get_equations_blocks()
+        for ode_eq in equations_block.get_ode_equations():
+            var = ode_eq.get_lhs()
+            if var.get_name() == var_base_name:
                 return True
+        return False
+
+    @classmethod
+    def variable_in_kernels(cls, var_name: str, kernels: List[ASTKernel]) -> bool:
+        """
+        Check if a variable by this name (in ode-toolbox style) is defined in the ode-toolbox solver results
+        """
+
+        var_name_base = var_name.split("__X__")[0]
+        var_name_base = var_name_base.split("__d")[0]
+        var_name_base = var_name_base.replace("__DOLLAR", "$")
+
+        for kernel in kernels:
+            for kernel_var in kernel.get_variables():
+                if var_name_base == kernel_var.get_name():
+                    return True
+
+        return False
+
+    @classmethod
+    def get_initial_value_from_ode_toolbox_result(cls, var_name: str, solver_dicts: List[dict]) -> str:
+        """
+        Get the initial value of the variable with the given name from the ode-toolbox results JSON.
+
+        N.B. the variable name is given in ode-toolbox notation.
+        """
+
+        for solver_dict in solver_dicts:
+            if solver_dict is None:
+                continue
+
+            if var_name in solver_dict["state_variables"]:
+                return solver_dict["initial_values"][var_name]
+
+        assert False, "Initial value not found for ODE with name \"" + var_name + "\""
+
+    @classmethod
+    def get_kernel_var_order_from_ode_toolbox_result(cls, kernel_var: str, solver_dicts: List[dict]) -> int:
+        """
+        Get the differential order of the variable with the given name from the ode-toolbox results JSON.
+
+        N.B. the variable name is given in NESTML notation, e.g. "g_in$"; convert to ode-toolbox export format notation (e.g. "g_in__DOLLAR").
+        """
+
+        kernel_var = kernel_var.replace("$", "__DOLLAR")
+
+        order = -1
+        for solver_dict in solver_dicts:
+            if solver_dict is None:
+                continue
+
+            for var_name in solver_dict["state_variables"]:
+                var_name_base = var_name.split("__X__")[0]
+                var_name_base = var_name_base.split("__d")[0]
+                if var_name_base == kernel_var:
+                    order = max(order, var_name.count("__d") + 1)
+
+        assert order >= 0, "Variable of name \"" + kernel_var + "\" not found in ode-toolbox result"
+        return order
+
+    @classmethod
+    def to_ode_toolbox_processed_name(cls, name: str) -> str:
+        """
+        Convert name in the same way as ode-toolbox does from input to output, i.e. returned names are compatible with ode-toolbox output
+        """
+        return name.replace("$", "__DOLLAR").replace("'", "__d")
+
+    @classmethod
+    def to_ode_toolbox_name(cls, name: str) -> str:
+        """
+        Convert to a name suitable for ode-toolbox input
+        """
+        return name.replace("$", "__DOLLAR")
+
+    @classmethod
+    def get_expr_from_kernel_var(cls, kernel: ASTKernel, var_name: str) -> Union[ASTExpression, ASTSimpleExpression]:
+        """
+        Get the expression using the kernel variable
+        """
+        assert type(var_name) == str
+        for var, expr in zip(kernel.get_variables(), kernel.get_expressions()):
+            if var.get_complete_name() == var_name:
+                return expr
+        assert False, "variable name not found in kernel"
+
+    @classmethod
+    def construct_kernel_X_spike_buf_name(cls, kernel_var_name: str, spike_input_port: ASTInputPort, order: int,
+                                          diff_order_symbol="__d"):
+        """
+        Construct a kernel-buffer name as <KERNEL_NAME__X__INPUT_PORT_NAME>
+
+        For example, if the kernel is
+        .. code-block::
+            kernel I_kernel = exp(-t / tau_x)
+
+        and the input port is
+        .. code-block::
+            pre_spikes nS <- spike
+
+        then the constructed variable will be 'I_kernel__X__pre_pikes'
+        """
+        assert type(kernel_var_name) is str
+        assert type(order) is int
+        assert type(diff_order_symbol) is str
+        return kernel_var_name.replace("$", "__DOLLAR") + "__X__" + str(spike_input_port) + diff_order_symbol * order
+
+    @classmethod
+    def replace_rhs_variable(cls, expr: ASTExpression, variable_name_to_replace: str, kernel_var: ASTVariable,
+                             spike_buf: ASTInputPort):
+        """
+        Replace variable names in definitions of kernel dynamics
+        :param expr: expression in which to replace the variables
+        :param variable_name_to_replace: variable name to replace in the expression
+        :param kernel_var: kernel variable instance
+        :param spike_buf: input port instance
+        :return:
+        """
+        def replace_kernel_var(node):
+            if type(node) is ASTSimpleExpression \
+                    and node.is_variable() \
+                    and node.get_variable().get_name() == variable_name_to_replace:
+                var_order = node.get_variable().get_differential_order()
+                new_variable_name = cls.construct_kernel_X_spike_buf_name(
+                    kernel_var.get_name(), spike_buf, var_order - 1, diff_order_symbol="'")
+                new_variable = ASTVariable(new_variable_name, var_order)
+                new_variable.set_source_position(node.get_variable().get_source_position())
+                node.set_variable(new_variable)
+
+        expr.accept(ASTHigherOrderVisitor(visit_funcs=replace_kernel_var))
+
+    @classmethod
+    def replace_rhs_variables(cls, expr: ASTExpression, kernel_buffers: Mapping[ASTKernel, ASTInputPort]):
+        """
+        Replace variable names in definitions of kernel dynamics.
+
+        Say that the kernel is
+
+        .. code-block::
+
+            G = -G / tau
+
+        Its variable symbol might be replaced by "G__X__spikesEx":
+
+        .. code-block::
+
+            G__X__spikesEx = -G / tau
+
+        This function updates the right-hand side of `expr` so that it would also read (in this example):
+
+        .. code-block::
+
+            G__X__spikesEx = -G__X__spikesEx / tau
+
+        These equations will later on be fed to ode-toolbox, so we use the symbol "'" to indicate differential order.
+
+        Note that for kernels/systems of ODE of dimension > 1, all variable orders and all variables for this kernel will already be present in `kernel_buffers`.
+        """
+        for kernel, spike_buf in kernel_buffers:
+            for kernel_var in kernel.get_variables():
+                variable_name_to_replace = kernel_var.get_name()
+                cls.replace_rhs_variable(expr, variable_name_to_replace=variable_name_to_replace,
+                                         kernel_var=kernel_var, spike_buf=spike_buf)
+
+    @classmethod
+    def is_delta_kernel(cls, kernel: ASTKernel) -> bool:
+        """
+        Catches definition of kernel, or reference (function call or variable name) of a delta kernel function.
+        """
+        if type(kernel) is ASTKernel:
+            if not len(kernel.get_variables()) == 1:
+                # delta kernel not allowed if more than one variable is defined in this kernel
+                return False
+            expr = kernel.get_expressions()[0]
+        else:
+            expr = kernel
+
+        rhs_is_delta_kernel = type(expr) is ASTSimpleExpression \
+                              and expr.is_function_call() \
+                              and expr.get_function_call().get_scope().resolve_to_symbol(
+            expr.get_function_call().get_name(), SymbolKind.FUNCTION) == PredefinedFunctions.name2function["delta"]
+        rhs_is_multiplied_delta_kernel = type(expr) is ASTExpression \
+                                         and type(expr.get_rhs()) is ASTSimpleExpression \
+                                         and expr.get_rhs().is_function_call() \
+                                         and expr.get_rhs().get_function_call().get_scope().resolve_to_symbol(
+            expr.get_rhs().get_function_call().get_name(), SymbolKind.FUNCTION) == PredefinedFunctions.name2function[
+                                             "delta"]
+        return rhs_is_delta_kernel or rhs_is_multiplied_delta_kernel
+
+    @classmethod
+    def get_input_port_by_name(cls, input_block: ASTInputBlock, port_name: str) -> ASTInputPort:
+        """
+        Get the input port given the port name
+        :param input_block: block to be searched
+        :param port_name: name of the input port
+        :return: input port object
+        """
+        for input_port in input_block.get_input_ports():
+            if input_port.name == port_name:
+                return input_port
+        return None
+
+    @classmethod
+    def get_parameter_by_name(cls, parameters_block: ASTBlockWithVariables, var_name: str) -> ASTDeclaration:
+        """
+        Get the declaration based on the name of the parameter
+        :param parameters_block: the parameter block
+        :param var_name: variable name to be searched
+        :return: declaration containing the variable
+        """
+        for decl in parameters_block.get_declarations():
+            for var in decl.get_variables():
+                if var.get_name() == var_name:
+                    return decl
+        return None
+
+    @classmethod
+    def collect_variable_names_in_expression(cls, expr: ASTNode) -> List[ASTVariable]:
+        """
+        Collect all occurrences of variables (`ASTVariable`), kernels (`ASTKernel`) XXX ...
+        :param expr: expression to collect the variables from
+        :return: a list of variables
+        """
+        vars_used_ = []
+
+        def collect_vars(_expr=None):
+            var = None
+            if isinstance(_expr, ASTSimpleExpression) and _expr.is_variable():
+                var = _expr.get_variable()
+            elif isinstance(_expr, ASTVariable):
+                var = _expr
+
+            if var:
+                vars_used_.append(var)
+
+        expr.accept(ASTHigherOrderVisitor(lambda x: collect_vars(x)))
+
+        return vars_used_
+
+    @classmethod
+    def get_eq_declarations_from_block(cls, var_name: str, block: ASTBlock) -> List[ASTDeclaration]:
+        """
+        Get declarations from the given block containing the given variable.
+        :param var_name: variable name
+        :param block: block to collect the variable declarations
+        :return: a list of declarations
+        """
+        decls = []
+
+        if block is None:
+            return decls
+
+        if not type(var_name) is str:
+            var_name = str(var_name)
+
+        for decl in block.get_declarations():
+            if isinstance(decl, ASTInlineExpression):
+                var_names = [decl.get_variable_name()]
+            elif isinstance(decl, ASTOdeEquation):
+                var_names = [decl.get_lhs().get_name()]
+            else:
+                var_names = [var.get_name() for var in decl.get_variables()]
+            for _var_name in var_names:
+                if _var_name == var_name:
+                    decls.append(decl)
+                    break
 
-    return False
-
-
-def add_assignment_to_update_block(assignment: ASTAssignment, neuron: ASTNeuron) -> ASTNeuron:
-    """
-    Adds a single assignment to the end of the update block of the handed over neuron.
-    :param assignment: a single assignment
-    :param neuron: a single neuron instance
-    :return: the modified neuron
-    """
-    small_stmt = ASTNodeFactory.create_ast_small_stmt(assignment=assignment,
-                                                      source_position=ASTSourceLocation.get_added_source_position())
-    stmt = ASTNodeFactory.create_ast_stmt(small_stmt=small_stmt,
-                                          source_position=ASTSourceLocation.get_added_source_position())
-    if not neuron.get_update_blocks():
-        neuron.create_empty_update_block()
-    neuron.get_update_blocks().get_block().get_stmts().append(stmt)
-    small_stmt.update_scope(neuron.get_update_blocks().get_block().get_scope())
-    stmt.update_scope(neuron.get_update_blocks().get_block().get_scope())
-    return neuron
-
-
-def add_declaration_to_update_block(declaration: ASTDeclaration, neuron: ASTNeuron) -> ASTNeuron:
-    """
-    Adds a single declaration to the end of the update block of the handed over neuron.
-    :param declaration: ASTDeclaration node to add
-    :param neuron: a single neuron instance
-    :return: a modified neuron
-    """
-    small_stmt = ASTNodeFactory.create_ast_small_stmt(declaration=declaration,
-                                                      source_position=ASTSourceLocation.get_added_source_position())
-    stmt = ASTNodeFactory.create_ast_stmt(small_stmt=small_stmt,
-                                          source_position=ASTSourceLocation.get_added_source_position())
-    if not neuron.get_update_blocks():
-        neuron.create_empty_update_block()
-    neuron.get_update_blocks().get_block().get_stmts().append(stmt)
-    small_stmt.update_scope(neuron.get_update_blocks().get_block().get_scope())
-    stmt.update_scope(neuron.get_update_blocks().get_block().get_scope())
-    return neuron
-
-
-def add_state_updates(neuron: ASTNeuron, update_expressions: Mapping[str, str]) -> ASTNeuron:
-    """
-    Adds all update instructions as contained in the solver output to the update block of the neuron.
-    :param neuron: a single neuron
-    :param update_expressions: map of variables to corresponding updates during the update step.
-    :return: a modified version of the neuron
-    """
-    for variable, update_expression in update_expressions.items():
-        declaration_statement = variable + '__tmp real = ' + update_expression
-        add_declaration_to_update_block(ModelParser.parse_declaration(declaration_statement), neuron)
-    for variable, update_expression in update_expressions.items():
-        add_assignment_to_update_block(ModelParser.parse_assignment(variable + ' = ' + variable + '__tmp'), neuron)
-    return neuron
-
-
-def variable_in_solver(kernel_var: str, solver_dicts):
-    """
-    Check if a variable by this name is defined in the ode-toolbox solver results,
-    """
-
-    for solver_dict in solver_dicts:
-        if solver_dict is None:
-            continue
-
-        for var_name in solver_dict["state_variables"]:
-            var_name_base = var_name.split("__X__")[0]
-            if var_name_base == kernel_var:
-                return True
-
-    return False
-
-
-def is_ode_variable(var_base_name, neuron):
-    equations_block = neuron.get_equations_blocks()
-    for ode_eq in equations_block.get_ode_equations():
-        var = ode_eq.get_lhs()
-        if var.get_name() == var_base_name:
-            return True
-    return False
-
-
-def variable_in_kernels(var_name: str, kernels):
-    """
-    Check if a variable by this name (in ode-toolbox style) is defined in the ode-toolbox solver results
-    """
-
-    var_name_base = var_name.split("__X__")[0]
-    var_name_base = var_name_base.split("__d")[0]
-    var_name_base = var_name_base.replace("__DOLLAR", "$")
-
-    for kernel in kernels:
-        for kernel_var in kernel.get_variables():
-            if var_name_base == kernel_var.get_name():
-                return True
-
-    return False
-
-
-def get_initial_value_from_ode_toolbox_result(var_name: str, solver_dicts):
-    """
-    Get the initial value of the variable with the given name from the ode-toolbox results JSON.
-
-    N.B. the variable name is given in ode-toolbox notation.
-    """
-
-    for solver_dict in solver_dicts:
-        if solver_dict is None:
-            continue
-
-        if var_name in solver_dict["state_variables"]:
-            return solver_dict["initial_values"][var_name]
-
-    assert False, "Initial value not found for ODE with name \"" + var_name + "\""
-
-
-def get_kernel_var_order_from_ode_toolbox_result(kernel_var: str, solver_dicts):
-    """
-    Get the differential order of the variable with the given name from the ode-toolbox results JSON.
-
-    N.B. the variable name is given in NESTML notation, e.g. "g_in$"; convert to ode-toolbox export format notation (e.g. "g_in__DOLLAR").
-    """
-
-    kernel_var = kernel_var.replace("$", "__DOLLAR")
-
-    order = -1
-    for solver_dict in solver_dicts:
-        if solver_dict is None:
-            continue
-
-        for var_name in solver_dict["state_variables"]:
-            var_name_base = var_name.split("__X__")[0]
-            var_name_base = var_name_base.split("__d")[0]
-            if var_name_base == kernel_var:
-                order = max(order, var_name.count("__d") + 1)
-
-    assert order >= 0, "Variable of name \"" + kernel_var + "\" not found in ode-toolbox result"
-    return order
-
-
-def to_ode_toolbox_processed_name(name: str) -> str:
-    """
-    Convert name in the same way as ode-toolbox does from input to output, i.e. returned names are compatible with ode-toolbox output
-    """
-    return name.replace("$", "__DOLLAR").replace("'", "__d")
-
-
-def to_ode_toolbox_name(name: str) -> str:
-    """
-    Convert to a name suitable for ode-toolbox input
-    """
-    return name.replace("$", "__DOLLAR")
-
-
-def get_expr_from_kernel_var(kernel, var_name):
-    assert type(var_name) == str
-    for var, expr in zip(kernel.get_variables(), kernel.get_expressions()):
-        if var.get_complete_name() == var_name:
-            return expr
-    assert False, "variable name not found in kernel"
-
-
-def construct_kernel_X_spike_buf_name(kernel_var_name: str, spike_input_port, order: int, diff_order_symbol="__d"):
-    assert type(kernel_var_name) is str
-    assert type(order) is int
-    assert type(diff_order_symbol) is str
-    return kernel_var_name.replace("$", "__DOLLAR") + "__X__" + str(spike_input_port) + diff_order_symbol * order
-
-
-def replace_rhs_variable(expr, variable_name_to_replace, kernel_var, spike_buf):
-    def replace_kernel_var(node):
-        if type(node) is ASTSimpleExpression \
-                and node.is_variable() \
-                and node.get_variable().get_name() == variable_name_to_replace:
-            var_order = node.get_variable().get_differential_order()
-            new_variable_name = construct_kernel_X_spike_buf_name(
-                kernel_var.get_name(), spike_buf, var_order - 1, diff_order_symbol="'")
-            new_variable = ASTVariable(new_variable_name, var_order)
-            new_variable.set_source_position(node.get_variable().get_source_position())
-            node.set_variable(new_variable)
-
-    expr.accept(ASTHigherOrderVisitor(visit_funcs=replace_kernel_var))
-
-
-def replace_rhs_variables(expr, kernel_buffers):
-    """
-    Replace variable names in definitions of kernel dynamics.
-
-    Say that the kernel is
-
-    .. code-block::
-
-        G = -G / tau
-
-    Its variable symbol might be replaced by "G__X__spikesEx":
-
-    .. code-block::
-
-        G__X__spikesEx = -G / tau
-
-    This function updates the right-hand side of `expr` so that it would also read (in this example):
-
-    .. code-block::
-
-        G__X__spikesEx = -G__X__spikesEx / tau
-
-    These equations will later on be fed to ode-toolbox, so we use the symbol "'" to indicate differential order.
-
-    Note that for kernels/systems of ODE of dimension > 1, all variable orders and all variables for this kernel will already be present in `kernel_buffers`.
-    """
-    for kernel, spike_buf in kernel_buffers:
-        for kernel_var in kernel.get_variables():
-            variable_name_to_replace = kernel_var.get_name()
-            replace_rhs_variable(expr, variable_name_to_replace=variable_name_to_replace,
-                                 kernel_var=kernel_var, spike_buf=spike_buf)
-
-
-def is_delta_kernel(kernel):
-    """
-    Catches definition of kernel, or reference (function call or variable name) of a delta kernel function.
-    """
-    if type(kernel) is ASTKernel:
-        if not len(kernel.get_variables()) == 1:
-            # delta kernel not allowed if more than one variable is defined in this kernel
-            return False
-        expr = kernel.get_expressions()[0]
-    else:
-        expr = kernel
-
-    rhs_is_delta_kernel = type(expr) is ASTSimpleExpression \
-        and expr.is_function_call() \
-        and expr.get_function_call().get_scope().resolve_to_symbol(expr.get_function_call().get_name(), SymbolKind.FUNCTION) == PredefinedFunctions.name2function["delta"]
-    rhs_is_multiplied_delta_kernel = type(expr) is ASTExpression \
-        and type(expr.get_rhs()) is ASTSimpleExpression \
-        and expr.get_rhs().is_function_call() \
-        and expr.get_rhs().get_function_call().get_scope().resolve_to_symbol(expr.get_rhs().get_function_call().get_name(), SymbolKind.FUNCTION) == PredefinedFunctions.name2function["delta"]
-    return rhs_is_delta_kernel or rhs_is_multiplied_delta_kernel
-
-
-def get_delta_kernel_prefactor_expr(kernel):
-    assert type(kernel) is ASTKernel
-    assert len(kernel.get_variables()) == 1
-    expr = kernel.get_expressions()[0]
-    if type(expr) is ASTExpression \
-            and expr.get_rhs().is_function_call() \
-            and expr.get_rhs().get_function_call().get_scope().resolve_to_symbol(expr.get_rhs().get_function_call().get_name(), SymbolKind.FUNCTION) == PredefinedFunctions.name2function["delta"] \
-            and expr.binary_operator.is_times_op:
-        return str(expr.lhs)
-
-
-def get_input_port_by_name(input_block, port_name):
-    for input_port in input_block.get_input_ports():
-        if input_port.name == port_name:
-            return input_port
-    return None
-
-
-def get_parameter_by_name(parameters_block, var_name):
-    for decl in parameters_block.get_declarations():
-        for var in decl.get_variables():
-            if var.get_name() == var_name:
-                return decl
-    return None
-
-
-def collect_variable_names_in_expression(expr):
-    """collect all occurrences of variables (`ASTVariable`), kernels (`ASTKernel`) XXX ...
-    """
-    vars_used_ = []
-
-    def collect_vars(_expr=None):
-        var = None
-        if isinstance(_expr, ASTSimpleExpression) and _expr.is_variable():
-            var = _expr.get_variable()
-        elif isinstance(_expr, ASTVariable):
-            var = _expr
-
-        if var:
-            vars_used_.append(var)
-
-    expr.accept(ASTHigherOrderVisitor(lambda x: collect_vars(x)))
-
-    return vars_used_
-
-
-def get_eq_declarations_from_block(var_name, block):
-    decls = []
-
-    if block is None:
         return decls
 
-    if not type(var_name) is str:
-        var_name = str(var_name)
-
-    for decl in block.get_declarations():
-        if isinstance(decl, ASTInlineExpression):
-            var_names = [decl.get_variable_name()]
-        elif isinstance(decl, ASTOdeEquation):
-            var_names = [decl.get_lhs().get_name()]
-        else:
-            var_names = [var.get_name() for var in decl.get_variables()]
-        for _var_name in var_names:
-            if _var_name == var_name:
-                decls.append(decl)
+    @classmethod
+    def recursive_dependent_variables_search(cls, vars: List[str], node: ASTNode) -> List[str]:
+        """
+        Collect all the variable names used in the defining expressions of variables moved from synapse to neuron.
+        :param vars: list of variable names moved from synapse to neuron
+        :param node: ASTNode to perform the recursive search
+        :return: list of variable names from the recursive search
+        """
+        for var in vars:
+            assert type(var) is str
+        vars_used = []
+        vars_to_check = set([var for var in vars])
+        vars_checked = set()
+        while vars_to_check:
+            var = None
+            for _var in vars_to_check:
+                if not _var in vars_checked:
+                    var = _var
+                    break
+            if not var:
+                # all variables checked
                 break
+            decls = cls.get_eq_declarations_from_block(var, node.get_equations_blocks())
 
-    return decls
+            if decls:
+                decl = decls[0]
+                if (type(decl) in [ASTDeclaration, ASTReturnStmt] and decl.has_expression()) \
+                        or type(decl) is ASTInlineExpression:
+                    vars_used.extend(cls.collect_variable_names_in_expression(decl.get_expression()))
+                elif type(decl) is ASTOdeEquation:
+                    vars_used.extend(cls.collect_variable_names_in_expression(decl.get_rhs()))
+                elif type(decl) is ASTKernel:
+                    for expr in decl.get_expressions():
+                        vars_used.extend(cls.collect_variable_names_in_expression(expr))
+                else:
+                    raise Exception("Tried to move unknown type " + str(type(decl)))
+                vars_used = [str(var) for var in vars_used]
+                vars_to_check = vars_to_check.union(set(vars_used))
+            vars_checked.add(var)
 
-
-def recursive_dependent_variables_search(vars: List[str], astnode):
-    for var in vars:
-        assert type(var) is str
-    vars_used = []
-    vars_to_check = set([var for var in vars])
-    vars_checked = set()
-    while vars_to_check:
-        var = None
-        for _var in vars_to_check:
-            if not _var in vars_checked:
-                var = _var
-                break
-        if not var:
-            # all variables checked
-            break
-        decls = get_eq_declarations_from_block(var, astnode.get_equations_blocks())
-
-        if decls:
-            decl = decls[0]
-            if (type(decl) in [ASTDeclaration, ASTReturnStmt] and decl.has_expression()) \
-               or type(decl) is ASTInlineExpression:
-                vars_used.extend(collect_variable_names_in_expression(decl.get_expression()))
-            elif type(decl) is ASTOdeEquation:
-                vars_used.extend(collect_variable_names_in_expression(decl.get_rhs()))
-            elif type(decl) is ASTKernel:
-                for expr in decl.get_expressions():
-                    vars_used.extend(collect_variable_names_in_expression(expr))
-            else:
-                raise Exception("Tried to move unknown type " + str(type(decl)))
-            vars_used = [str(var) for var in vars_used]
-            vars_to_check = vars_to_check.union(set(vars_used))
-
-#         else:
-#             if get_input_port_by_name(parent_node.get_input_blocks(), var):
-#                 # case that variable is the postsynaptic synapse port?!
-#                 pass
-#             elif get_parameter_by_name(parent_node.get_parameter_blocks(), var):
-#                 # case that variable is a parameter?!
-#                 pass
-#             elif var == "t":
-#                 # time variable: not changed
-#                 pass
-#             else:
-#                 raise Exception("Couldn't find declaration for variable: " + str(var))
-        vars_checked.add(var)
-
-    return vars_checked
+        return vars_checked
