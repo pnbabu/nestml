@@ -549,7 +549,6 @@ class NESTCodeGenerator(CodeGenerator):
             #   move defining equations for variables from synapse to neuron
             #
 
-
             def equations_from_syn_to_neuron(state_var, synapse_block, neuron_block, var_name_suffix, mode):
                 if not neuron_block or not synapse_block:
                     return
@@ -743,6 +742,11 @@ class NESTCodeGenerator(CodeGenerator):
             all_state_vars = [s.get_variables() for s in new_neuron.get_state_blocks().get_declarations()]
             all_state_vars = sum(all_state_vars, [])
             all_state_vars = [var.name for var in all_state_vars]
+
+            # add names of kernels
+            kernel_buffers = self.generate_kernel_buffers_(synapse, synapse.get_equations_blocks())
+            all_state_vars += [var.name for k in kernel_buffers for var in k[0].variables]
+
             for state_var in vars_used:
                 if (new_synapse.get_equations_block() is not None) and (str(state_var) in all_state_vars):
                     Logger.log_message(None, -1, "\t• Moving variable " + str(state_var), None, LoggingLevel.INFO)
@@ -986,8 +990,6 @@ class NESTCodeGenerator(CodeGenerator):
             spike_updates, post_spike_updates = self.analyse_neuron(neuron)
             neuron.spike_updates = spike_updates
             neuron.post_spike_updates = post_spike_updates
-            # now store the transformed model
-            self.store_transformed_model(neuron)
 
     def analyse_transform_synapses(self, synapses):
         # type: (list(ASTsynapse)) -> None
@@ -1000,8 +1002,6 @@ class NESTCodeGenerator(CodeGenerator):
                 print("Analysing/transforming synapse {}.".format(synapse.get_name()))
             spike_updates, post_spike_updates = self.analyse_synapse(synapse)
             synapse.spike_updates = spike_updates
-            # now store the transformed model
-            self.store_transformed_model(synapse)
 
     def analyse_neuron(self, neuron: ASTNeuron) -> List[ASTAssignment]:
         """
@@ -1072,19 +1072,6 @@ class NESTCodeGenerator(CodeGenerator):
             neuron, kernel_buffers, [analytic_solver, numeric_solver], delta_factors)
 
         return spike_updates, post_spike_updates
-
-    '''def analyse_synapse(self, synapse):
-        # type: (ASTsynapse) -> None
-        """
-        Analyse and transform a single synapse.
-        :param synapse: a single synapse.
-        """
-        code, message = Messages.get_start_processing_model(synapse.get_name())
-        Logger.log_message(synapse, code, message, synapse.get_source_position(), LoggingLevel.INFO)
-
-        self.add_timestep_symbol(synapse)
-
-        return []'''
 
     def analyse_synapse(self, synapse: ASTSynapse) -> None:
         """
@@ -1607,8 +1594,3 @@ class NESTCodeGenerator(CodeGenerator):
 
         return spike_updates, post_spike_updates
 
-    def store_transformed_model(self, ast):
-        if FrontendConfiguration.store_log:
-            with open(str(os.path.join(FrontendConfiguration.get_target_path(), '..', 'report',
-                                       ast.get_name())) + '.txt', 'w+') as f:
-                f.write(str(ast))
