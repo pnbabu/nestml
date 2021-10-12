@@ -744,7 +744,7 @@ class NESTCodeGenerator(CodeGenerator):
             all_state_vars = [var.name for var in all_state_vars]
 
             # add names of kernels
-            kernel_buffers = self.generate_kernel_buffers_(synapse, synapse.get_equations_blocks())
+            kernel_buffers = ASTTransformers.generate_kernel_buffers_(synapse, synapse.get_equations_blocks())
             all_state_vars += [var.name for k in kernel_buffers for var in k[0].variables]
 
             for state_var in vars_used:
