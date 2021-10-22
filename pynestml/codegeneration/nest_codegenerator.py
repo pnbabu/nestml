@@ -76,7 +76,7 @@ def find_spiking_post_port(synapse, namespace):
         for post_port_name in namespace["post_ports"]:
             if synapse.get_input_blocks() \
                     and synapse.get_input_blocks().get_input_ports() \
-                    and get_input_port_by_name(synapse.get_input_blocks(), post_port_name).is_spike():
+                    and ASTTransformers.get_input_port_by_name(synapse.get_input_blocks(), post_port_name).is_spike():
                 return post_port_name
     return None
 
