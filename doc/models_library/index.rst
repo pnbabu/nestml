@@ -2,7 +2,7 @@ Models library
 ==============
 
 
-:doc:`neuron/iaf_psc_delta <iaf_psc_delta>`
+:doc:`iaf_psc_delta <neuron/iaf_psc_delta>`
 ------------------------------------
 
 Source file: `iaf_psc_delta.nestml <https://www.github.com/nest/nestml/blob/master/models/iaf_psc_delta.nestml>`_
