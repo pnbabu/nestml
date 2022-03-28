@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# nest_code_generator.py
+# nest_gpu_code_generator.py
 #
 # This file is part of NEST.
 #
