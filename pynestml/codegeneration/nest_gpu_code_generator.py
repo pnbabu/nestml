@@ -31,6 +31,10 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
     """
 
     _default_options = {
+        "neuron_parent_class": "BaseNeuron",
+        "neuron_parent_class_include": "archiving_node.h",
+        "preserve_expressions": False,
+        "simplify_expression": "sympy.logcombine(sympy.powsimp(sympy.expand(expr)))",
         "templates": {
             "path": os.path.join(os.path.dirname(__file__), "resources_nest_gpu"),
             "model_templates": {
@@ -42,9 +46,10 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
     }
 
     def __init__(self, options: Optional[Mapping[str, Any]] = None):
-        super().__init__("NEST_GPU", options)
+        super().__init__(options)
+        self._target = "NEST_GPU"
         super(NESTGPUCodeGenerator, self).setup_template_env()
         # TODO: setup the printers and reference converters
 
     def generate_code(self, neurons: Sequence[ASTNeuron], synapses: Sequence[ASTSynapse]) -> None:
-        super(NESTGPUCodeGenerator, self).generate_neurons(neurons)
+        super(NESTGPUCodeGenerator, self).generate_code(neurons)

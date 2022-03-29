@@ -66,7 +66,7 @@ def code_generator_from_target_name(target_name: str, options: Optional[Mapping[
 
     if target_name.upper() == "NEST_GPU":
         from pynestml.codegeneration.nest_gpu_code_generator import NESTGPUCodeGenerator
-        return NESTGPUCodeGenerator()
+        return NESTGPUCodeGenerator(options)
 
     if target_name.upper() == "NONE":
         # dummy/null target: user requested to not generate any code
