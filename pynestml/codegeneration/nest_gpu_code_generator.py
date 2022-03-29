@@ -34,8 +34,8 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
         "templates": {
             "path": os.path.join(os.path.dirname(__file__), "resources_nest_gpu"),
             "model_templates": {
-                "neuron": ["user_m1_iaf_psc_exp.cu", "user_m1_iaf_psc_exp.h",
-                           "user_m1_iaf_psc_exp_kernel.h", "user_m1_iaf_psc_exp_rk5.h"],
+                "neuron": ["user_m1_iaf_psc_exp.cu.jinja2", "user_m1_iaf_psc_exp.h.jinja2",
+                           "user_m1_iaf_psc_exp_kernel.h.jinja2", "user_m1_iaf_psc_exp_rk5.h.jinja2"],
             },
             "module_templates": [""]
         }
