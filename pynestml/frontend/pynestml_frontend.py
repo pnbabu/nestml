@@ -87,6 +87,10 @@ def builder_from_target_name(target_name: str, options: Optional[Mapping[str, An
         from pynestml.codegeneration.nest_builder import NESTBuilder
         return NESTBuilder(options)
 
+    if target_name.upper() == "NEST_GPU":
+        from pynestml.codegeneration.nest_gpu_builder import NESTGPUBuilder
+        return NESTGPUBuilder(options)
+
     return None   # no builder requested or available
 
 
