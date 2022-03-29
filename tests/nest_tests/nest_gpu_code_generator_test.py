@@ -19,11 +19,10 @@
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
 import os
-
 from pynestml.frontend.pynestml_frontend import generate_target
 
 
-class NESTGPUCodeGeneratorTest:
+class TestNESTGPUCodeGenerator:
     """
     Tests code generation for the NEST GPU target.
     """

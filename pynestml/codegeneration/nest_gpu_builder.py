@@ -43,10 +43,7 @@ class NESTGPUBuilder(Builder):
         super().__init__("NEST_GPU", options)
 
         if not self.option_exists("nest_gpu_path") or not self.get_option("nest_gpu_path"):
-            if "NEST_GPU" in os.environ:
-                nest_gpu_path = os.environ["NEST_GPU"]
-            else:
-                nest_gpu_path = os.pwd
+            nest_gpu_path = os.environ["NEST_GPU"]
             self.set_options({"nest_gpu_path": nest_gpu_path})
             Logger.log_message(None, -1, "The NEST-GPU path was automatically detected as: " + nest_gpu_path, None,
                                LoggingLevel.INFO)
