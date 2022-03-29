@@ -18,19 +18,33 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
-from typing import Sequence
-
+import os
+from typing import Sequence, Optional, Mapping, Any
+from pynestml.codegeneration.nest_code_generator import NESTCodeGenerator
 from pynestml.meta_model.ast_synapse import ASTSynapse
-
-from pynestml.codegeneration.code_generator import CodeGenerator
 from pynestml.meta_model.ast_neuron import ASTNeuron
 
 
-class NESTGPUCodeGenerator(CodeGenerator):
+class NESTGPUCodeGenerator(NESTCodeGenerator):
     """
     A code generator for NEST GPU target
     """
 
+    _default_options = {
+        "templates": {
+            "path": os.path.join(os.path.dirname(__file__), "resources_nest_gpu"),
+            "model_templates": {
+                "neuron": ["user_m1_iaf_psc_exp.cu", "user_m1_iaf_psc_exp.h",
+                           "user_m1_iaf_psc_exp_kernel.h", "user_m1_iaf_psc_exp_rk5.h"],
+            },
+            "module_templates": [""]
+        }
+    }
+
+    def __init__(self, options: Optional[Mapping[str, Any]] = None):
+        super().__init__("NEST_GPU", options)
+        super(NESTGPUCodeGenerator, self).setup_template_env()
+        # TODO: setup the printers and reference converters
+
     def generate_code(self, neurons: Sequence[ASTNeuron], synapses: Sequence[ASTSynapse]) -> None:
-        # TODO:
-        pass
+        super(NESTGPUCodeGenerator, self).generate_neurons(neurons)
