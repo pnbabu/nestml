@@ -73,9 +73,9 @@ class NESTGPUBuilder(Builder):
 
         # Construct the build commands
         autoreconf_cmd = ["autoreconf",  "-i"]
-        config_args = [f"--prefix=${nest_gpu_path}", f"--exec-prefix=${nest_gpu_path}", "--with-gpu-arch=sm_80"]
+        config_args = [f"--prefix={nest_gpu_path}", f"--exec-prefix={nest_gpu_path}", "--with-gpu-arch=sm_80"]
         config_cmd = ["./configure"]
-        config_cmd = config_cmd.extend(config_args)
+        config_cmd.extend(config_args)
         make_cmd = ['make']
         make_install_cmd = ['make', 'install']
 
