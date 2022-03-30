@@ -128,9 +128,9 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
         """
         Modifies the Makefile in NEST GPU repository to compile the newly generated models.
         """
-        makefile_path = str(os.path.dirname(FrontendConfiguration.get_target_path()))
+        makefile_path = str(os.path.join(os.path.dirname(FrontendConfiguration.get_target_path()), "Makefile.am"))
         shutil.copy(makefile_path, makefile_path + ".bak")
-        
+
         with open(makefile_path, "r+") as f:
             file_str = f.read()
             pos = file_str.find("ngpu_src_files")
