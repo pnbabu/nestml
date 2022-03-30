@@ -91,13 +91,16 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
         """
         neuron_models_h_path = str(os.path.join(FrontendConfiguration.get_target_path(), "neuron_models.h"))
         shutil.copy(neuron_models_h_path, neuron_models_h_path + ".bak")
-        with open(neuron_models_h_path, "r+") as f:
+        with open(neuron_models_h_path, "r") as f:
             file_str = f.read()
-            pos = file_str.find("N_NEURON_MODELS")
-            file_str = file_str[:pos] + "i_" + neuron.get_name() + "_model," + file_str[pos:]
 
-            pos = file_str.rfind("};")
-            file_str = file_str[:pos] + ", \"" + neuron.get_name() + "\"" + file_str[pos:]
+        pos = file_str.find("N_NEURON_MODELS")
+        file_str = file_str[:pos] + "i_" + neuron.get_name() + "_model," + file_str[pos:]
+
+        pos = file_str.rfind("};")
+        file_str = file_str[:pos] + ", \"" + neuron.get_name() + "\"" + file_str[pos:]
+
+        with open(neuron_models_h_path, "w") as f:
             f.write(file_str)
 
     def add_model_to_neuron_class(self, neuron: ASTNeuron):
@@ -107,21 +110,24 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
         neuron_models_cu_path = str(os.path.join(FrontendConfiguration.get_target_path(), "neuron_models.cu"))
         shutil.copy(neuron_models_cu_path, neuron_models_cu_path + ".bak")
 
-        with open(neuron_models_cu_path, "r+") as f:
+        with open(neuron_models_cu_path, "r") as f:
             file_str = f.read()
-            itr = re.finditer(r"#include \"[[a-zA-Z_][a-zA-Z0-9_]*.h\"", file_str)
-            start_pos, end_pos = [(m.start(0), m.end(0)) for m in itr][-1]
-            file_str = file_str[:end_pos + 1] + "#include \"" + neuron.get_name() + ".h\"" + file_str[end_pos:]
 
-            model_name_index = "i_" + neuron.get_name() + "_model"
-            model_name = neuron.get_name()
-            code_block = f"else if (model_name == neuron_model_name[{model_name_index}]) {{\n" \
-                         f"    {model_name} *{model_name}_group = new {model_name};\n" \
-                         f"    node_vect_.push_back({model_name}_group);\n" \
-                         " }\n"
-            itr = re.finditer(r"else {\n\s+throw ngpu_exception", file_str)
-            pos = [m.start(0) for m in itr][-1]
-            file_str = file_str[:pos] + code_block + file_str[pos:]
+        itr = re.finditer(r"#include \"[[a-zA-Z_][a-zA-Z0-9_]*.h\"", file_str)
+        start_pos, end_pos = [(m.start(0), m.end(0)) for m in itr][-1]
+        file_str = file_str[:end_pos + 1] + "#include \"" + neuron.get_name() + ".h\"" + file_str[end_pos:]
+
+        model_name_index = "i_" + neuron.get_name() + "_model"
+        model_name = neuron.get_name()
+        code_block = f"else if (model_name == neuron_model_name[{model_name_index}]) {{\n" \
+                     f"    {model_name} *{model_name}_group = new {model_name};\n" \
+                     f"    node_vect_.push_back({model_name}_group);\n" \
+                     " }\n"
+        itr = re.finditer(r"else {\n\s+throw ngpu_exception", file_str)
+        pos = [m.start(0) for m in itr][-1]
+        file_str = file_str[:pos] + code_block + file_str[pos:]
+
+        with open(neuron_models_cu_path, "w") as f:
             f.write(file_str)
 
     def add_files_to_makefile(self, neuron: ASTNeuron):
@@ -131,19 +137,22 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
         makefile_path = str(os.path.join(os.path.dirname(FrontendConfiguration.get_target_path()), "Makefile.am"))
         shutil.copy(makefile_path, makefile_path + ".bak")
 
-        with open(makefile_path, "r+") as f:
+        with open(makefile_path, "r") as f:
             file_str = f.read()
-            pos = file_str.find("ngpu_src_files")
-            code_block = " \\\n" \
-                         f"$(top_srcdir)/src/{neuron.get_name()}.h \\\n" \
-                         f"$(top_srcdir)/src/{neuron.get_name()}_kernel.h \\\n" \
-                         f"$(top_srcdir)/src/{neuron.get_name()}_rk5.h\n\n"
-            file_str = file_str[:pos - 2] + code_block + file_str[pos:]
 
-            pos = file_str.find("COMPILER_FLAGS")
-            code_block = " \\\n" \
-                         f"$(top_srcdir)/src/{neuron.get_name()}.cu\n\n"
-            file_str = file_str[:pos - 2] + code_block + file_str[pos:]
+        pos = file_str.find("ngpu_src_files")
+        code_block = " \\\n" \
+                     f"$(top_srcdir)/src/{neuron.get_name()}.h \\\n" \
+                     f"$(top_srcdir)/src/{neuron.get_name()}_kernel.h \\\n" \
+                     f"$(top_srcdir)/src/{neuron.get_name()}_rk5.h\n\n"
+        file_str = file_str[:pos - 2] + code_block + file_str[pos:]
+
+        pos = file_str.find("COMPILER_FLAGS")
+        code_block = " \\\n" \
+                     f"$(top_srcdir)/src/{neuron.get_name()}.cu\n\n"
+        file_str = file_str[:pos - 2] + code_block + file_str[pos:]
+
+        with open(makefile_path, "w") as f:
             f.write(file_str)
 
     def generate_code(self, neurons: Sequence[ASTNeuron], synapses: Sequence[ASTSynapse]) -> None:
