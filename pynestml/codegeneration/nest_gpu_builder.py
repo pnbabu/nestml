@@ -43,7 +43,10 @@ class NESTGPUBuilder(Builder):
         super().__init__("NEST_GPU", options)
 
         if not self.option_exists("nest_gpu_path") or not self.get_option("nest_gpu_path"):
-            nest_gpu_path = os.environ["NEST_GPU"]
+            if "NEST_GPU" in os.environ:
+                nest_gpu_path = os.environ["NEST_GPU"]
+            else:
+                nest_gpu_path = os.getcwd()
             self.set_options({"nest_gpu_path": nest_gpu_path})
             Logger.log_message(None, -1, "The NEST-GPU path was automatically detected as: " + nest_gpu_path, None,
                                LoggingLevel.INFO)
@@ -71,10 +74,13 @@ class NESTGPUBuilder(Builder):
         # Construct the build commands
         autoreconf_cmd = ["autoreconf",  "-i"]
         config_args = [f"--prefix=${nest_gpu_path}", f"--exec-prefix=${nest_gpu_path}", "--with-gpu-arch=sm_80"]
-        config_cmd = ["./configure"].extend(config_args)
+        config_cmd = ["./configure"]
+        config_cmd = config_cmd.extend(config_args)
         make_cmd = ['make']
         make_install_cmd = ['make', 'install']
 
+        # a workaround for now
+        # TODO: obtain this path automatically
         working_dir = str(os.path.join(nest_gpu_path, "repo"))
 
         # first call autoreconf command
