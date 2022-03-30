@@ -138,12 +138,12 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
                          f"$(top_srcdir)/src/{neuron.get_name()}.h \\\n" \
                          f"$(top_srcdir)/src/{neuron.get_name()}_kernel.h \\\n" \
                          f"$(top_srcdir)/src/{neuron.get_name()}_rk5.h\n\n"
-            file_str = file_str[:pos - 3] + code_block + file_str[pos:]
+            file_str = file_str[:pos - 2] + code_block + file_str[pos:]
 
             pos = file_str.find("COMPILER_FLAGS")
             code_block = " \\\n" \
                          f"$(top_srcdir)/src/{neuron.get_name()}.cu\n\n"
-            file_str = file_str[:pos - 3] + code_block + file_str[pos:]
+            file_str = file_str[:pos - 2] + code_block + file_str[pos:]
             f.write(file_str)
 
     def generate_code(self, neurons: Sequence[ASTNeuron], synapses: Sequence[ASTSynapse]) -> None:
