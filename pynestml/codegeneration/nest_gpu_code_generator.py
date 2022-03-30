@@ -134,14 +134,16 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
         with open(makefile_path, "r+") as f:
             file_str = f.read()
             pos = file_str.find("ngpu_src_files")
-            code_block = f"$(top_srcdir)/src/{neuron.get_name()}.h\n" \
-                         f"$(top_srcdir)/src/{neuron.get_name()}_kernel.h\n" \
-                         f"$(top_srcdir)/src/{neuron.get_name()}_rk5.h\n\n"
-            file_str = file_str[:pos - 1] + code_block + file_str[pos:]
+            code_block = " \\\n" \
+                         f"$(top_srcdir)/src/{neuron.get_name()}.h \\\n" \
+                         f"$(top_srcdir)/src/{neuron.get_name()}_kernel.h \\\n" \
+                         f"$(top_srcdir)/src/{neuron.get_name()}_rk5.h \\\n\n"
+            file_str = file_str[:pos - 3] + code_block + file_str[pos:]
 
             pos = file_str.find("COMPILER_FLAGS")
-            code_block = f"$(top_srcdir)/src/{neuron.get_name()}.cu\n\n"
-            file_str = file_str[:pos] + code_block + file_str[pos:]
+            code_block = " \\\n" \
+                         f"$(top_srcdir)/src/{neuron.get_name()}.cu\n\n"
+            file_str = file_str[:pos - 3] + code_block + file_str[pos:]
             f.write(file_str)
 
     def generate_code(self, neurons: Sequence[ASTNeuron], synapses: Sequence[ASTSynapse]) -> None:
