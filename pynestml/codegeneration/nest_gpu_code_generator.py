@@ -137,7 +137,7 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
             code_block = " \\\n" \
                          f"$(top_srcdir)/src/{neuron.get_name()}.h \\\n" \
                          f"$(top_srcdir)/src/{neuron.get_name()}_kernel.h \\\n" \
-                         f"$(top_srcdir)/src/{neuron.get_name()}_rk5.h \\\n\n"
+                         f"$(top_srcdir)/src/{neuron.get_name()}_rk5.h\n\n"
             file_str = file_str[:pos - 3] + code_block + file_str[pos:]
 
             pos = file_str.find("COMPILER_FLAGS")
