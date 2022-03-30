@@ -21,6 +21,7 @@
 import os
 from typing import Sequence, Optional, Mapping, Any
 from pynestml.codegeneration.nest_code_generator import NESTCodeGenerator
+from pynestml.frontend.frontend_configuration import FrontendConfiguration
 from pynestml.meta_model.ast_synapse import ASTSynapse
 from pynestml.meta_model.ast_neuron import ASTNeuron
 
@@ -50,6 +51,26 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
         self._target = "NEST_GPU"
         super(NESTGPUCodeGenerator, self).setup_template_env()
         # TODO: setup the printers and reference converters
+
+    def generate_neuron_code(self, neuron: ASTNeuron) -> None:
+        if not os.path.isdir(FrontendConfiguration.get_target_path()):
+            os.makedirs(FrontendConfiguration.get_target_path())
+
+        for _model_templ in self._model_templates["neuron"]:
+            file_extension = _model_templ.filename.split(".")[-2]
+            _file = _model_templ.render(self._get_neuron_model_namespace(neuron))
+            suffix = ""
+            if "kernel" in _model_templ.filename:
+                suffix = "_kernel"
+            elif "rk5" in _model_templ.filename:
+                suffix = "_rk5"
+
+            with open(str(os.path.join(FrontendConfiguration.get_target_path(),
+                                       neuron.get_name())) + suffix + "." + file_extension, "w+") as f:
+                f.write(str(_file))
+
+    def generate_module_code(self, neurons: Sequence[ASTNeuron], synapses: Sequence[ASTSynapse]):
+        pass
 
     def generate_code(self, neurons: Sequence[ASTNeuron], synapses: Sequence[ASTSynapse]) -> None:
         super(NESTGPUCodeGenerator, self).generate_code(neurons)
