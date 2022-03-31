@@ -78,7 +78,7 @@ extern __constant__ float NESTGPUTimeResolution;
 #define P22 param[i_P22]
 
 __device__
-double propagator_32( double tau_syn, double tau, double C, double h )
+double {{neuronName}}_propagator_32( double tau_syn, double tau, double C, double h )
 {
   const double P32_linear = 1.0 / ( 2.0 * C * tau * tau ) * h * h
     * ( tau_syn - tau ) * exp( -h / tau );
@@ -111,8 +111,8 @@ __global__ void {{neuronName}}_Calibrate(int n_node, float *param_arr,
     P11ex = exp( -h / tau_ex );
     P11in = exp( -h / tau_in );
     P22 = exp( -h / tau_m );
-    P21ex = (float)propagator_32( tau_ex, tau_m, C_m, h );
-    P21in = (float)propagator_32( tau_in, tau_m, C_m, h ); 
+    P21ex = (float){{neuronName}}_propagator_32( tau_ex, tau_m, C_m, h );
+    P21in = (float){{neuronName}}_propagator_32( tau_in, tau_m, C_m, h );
     P20 = tau_m / C_m * ( 1.0 - P22 );
   }
 }
