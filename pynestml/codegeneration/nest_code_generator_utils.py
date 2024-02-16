@@ -91,7 +91,7 @@ class NESTCodeGeneratorUtils:
                 nestml_neuron_model = nestml_model_file.read()
 
         # update neuron model name inside the file
-        neuron_model_name_orig = re.findall(r"neuron\ [^:\s]*:", nestml_neuron_model)[0][7:-1]
+        neuron_model_name_orig = re.findall(r"neuron\ [^:\s]*:", nestml_neuron_modenl)[0][7:-1]
         neuron_model_name_uniq = neuron_model_name_orig + uniq_id
         nestml_model = re.sub(r"neuron\ [^:\s]*:",
                               "neuron " + neuron_model_name_uniq + ":", nestml_neuron_model)
