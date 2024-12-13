@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #
 # conf.py
 #
@@ -147,6 +148,7 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx_design',
     'nbsphinx',
+    'sphinx_sitemap',
 ]
 
 mathjax_path = "https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.4/MathJax.js?config=TeX-AMS-MML_HTMLorMML"
@@ -233,6 +235,9 @@ htmlhelp_basename = 'NESTMLdoc'
 
 html_show_sphinx = False
 html_show_copyright = True
+
+# Base URL for sphinx sitemap
+html_baseurl = 'https://nestml.readthedocs.io/en/latest/'
 
 # This way works for ReadTheDocs
 # With this local 'make html' is broken!
