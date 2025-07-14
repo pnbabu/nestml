@@ -26,7 +26,7 @@ Random balanced network (alpha synapses) connected with NEST
 This script simulates an excitatory and an inhibitory population on
 the basis of the network used in [1]_.
 
-When connecting the network, customary synapse models are used, which
+When connecting the network, custom synapse models are used, which
 allow for querying the number of created synapses. Using spike
 recorders, the average firing rates of the neurons in the populations
 are established. The building as well as the simulation time of the
@@ -62,8 +62,6 @@ import argparse
 import os
 
 from plotting_options import *
-
-
 
 
 ###############################################################################
@@ -113,7 +111,7 @@ def _histogram(a, bins=10, bin_range=None, normed=False):
     block = 65536
     n = sort(a[:block]).searchsorted(bins)
     for i in range(block, a.size, block):
-        n += sort(a[i : i + block]).searchsorted(bins)
+        n += sort(a[i:i + block]).searchsorted(bins)
     n = concatenate([n, [len(a)]])
     n = n[1:] - n[:-1]
 
@@ -168,7 +166,6 @@ def raster_plot_from_device(detec, path, fname_snip, hist_binwidth=10.):
     plt.close()
 
 
-
 ###############################################################################
 # Helper functions
 
@@ -179,6 +176,7 @@ def convert_np_arrays_to_lists(obj):
         return obj.tolist()
     else:
         return obj
+
 
 ###############################################################################
 # Helper functions for memory benchmarking
@@ -192,7 +190,7 @@ def _VmB(VmKey):
         t = open(_proc_status)
         v = t.read()
         t.close()
-    except:
+    except Exception:
         return 0.0  # non-Linux?
     # get VmKey line e.g. 'VmRSS:  9999  kB\n ...'
     i = v.index(VmKey)
@@ -243,6 +241,7 @@ def compute_cv(spike_train):
 
     return cv
 
+
 def compute_cv_for_neurons(spike_trains):
     cvs = []
     for spike_train in spike_trains:
@@ -277,9 +276,6 @@ def plot_interspike_intervals(spike_times_list, path, fname_snip=""):
     plt.close()
 
     np.savetxt(f"{path}/isi_distribution_" + fname_snip + "_isi_list.txt", interspike_intervals)
-
-
-
 
 
 ###############################################################################
@@ -457,18 +453,14 @@ nest.resolution = dt
 nest.print_time = True
 nest.overwrite_files = True
 
-
 # current_time_ms = int(datetime.now().timestamp() * 1000) % 2**31           # Get the current time in milliseconds since the Unix epoch, modulo max nr of RNG seed bits in NEST (32)
 nest.rng_seed = args.rng_seed
 print("The RNG seed is: " + str(nest.rng_seed))
 
-
-
 try:
     nest.Install("nestmlmodule")
-except:
+except Exception:
     pass
-#nest.Install("nestmlOptimizedmodule")
 nest.Install("nestmlplasticmodule")
 nest.Install("nestmlnocomodule")
 print("Building network")
@@ -506,9 +498,9 @@ print("Connecting devices")
 
 ###############################################################################
 # Definition of a synapse using ``CopyModel``, which expects the model name of
-# a pre-defined synapse, the name of the customary synapse and an optional
+# a pre-defined synapse, the name of the custom synapse and an optional
 # parameter dictionary. The parameters defined in the dictionary will be the
-# default parameter for the customary synapse. Here we define one synapse for
+# default parameter for the custom synapse. Here we define one synapse for
 # the excitatory and one for the inhibitory connections giving the
 # previously defined weights and equal delays.
 
@@ -678,7 +670,7 @@ if args.benchmarkPath != "":
     status["memory_benchmark"] = {"rss": get_rss(),
                                   "vmsize": get_vmsize(),
                                   "vmpeak": get_vmpeak()}
-    status["num_synapses"] = num_synapses  #len(conns)
+    status["num_synapses"] = num_synapses
     status["firing_rate_exc"] = rate_ex
     status["firing_rate_inh"] = rate_in
     status["build_time"] = build_time
@@ -694,7 +686,6 @@ if args.benchmarkPath != "":
         json.dump(status, f, indent=4)
         f.close()
 
-    #nest.raster_plot.from_device(espikes, hist=True, title="", figsize=(6, 4))
     raster_plot_from_device(espikes, path, fname_snip)
 
     fig, ax = plt.subplots()
@@ -705,4 +696,3 @@ if args.benchmarkPath != "":
     plt.close()
 
     plot_interspike_intervals(exc_spikes, path, fname_snip=fname_snip)
-
