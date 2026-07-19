@@ -69,7 +69,7 @@ def transformers_from_target_name(target_name: str, options: Optional[Mapping[st
         add_timestep_to_internals_transformer = AddTimestepToInternalsTransformer()
         transformers.append(add_timestep_to_internals_transformer)
 
-    if target_name.upper() in ["NEST", "SPINNAKER", "GENN"]:
+    if target_name.upper() in ["NEST", "SPINNAKER", "GENN", "NEST_GPU"]:
         from pynestml.transformers.illegal_variable_name_transformer import IllegalVariableNameTransformer
 
         # rewrite all C++ keywords
@@ -114,7 +114,7 @@ def transformers_from_target_name(target_name: str, options: Optional[Mapping[st
         transformer = InlineExpressionExpansionTransformer()
         transformers.append(transformer)
 
-    if target_name.upper() == "NEST":
+    if target_name.upper() in ["NEST", "NEST_GPU"]:
         from pynestml.transformers.synapse_post_neuron_transformer import SynapsePostNeuronTransformer
 
         # co-generate neuron and synapse

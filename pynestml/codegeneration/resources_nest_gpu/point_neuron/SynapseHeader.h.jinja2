@@ -1,0 +1,177 @@
+{#
+SynapseHeader.h.jinja2
+
+This file is part of NEST GPU.
+
+Copyright (C) 2021 The NEST Initiative
+
+NEST GPU is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 2 of the License, or
+(at your option) any later version.
+
+NEST GPU is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with NEST GPU.  If not, see <http://www.gnu.org/licenses/>.
+#}
+/*
+ *  {{ synapseName }}.cu
+ *
+ *  This file is part of NEST GPU.
+ *
+ *  Copyright (C) 2021 The NEST Initiative
+ *
+ *  NEST GPU is free software: you can redistribute it and/or modify
+ *  it under the terms of the GNU General Public License as published by
+ *  the Free Software Foundation, either version 2 of the License, or
+ *  (at your option) any later version.
+ *
+ *  NEST GPU is distributed in the hope that it will be useful,
+ *  but WITHOUT ANY WARRANTY; without even the implied warranty of
+ *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ *  GNU General Public License for more details.
+ *
+ *  You should have received a copy of the GNU General Public License
+ *  along with NEST GPU.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ *  Generated from NESTML {{ nestml_version }} at time: {{ now }}
+ */
+#ifndef {{ synapseName.upper() }}_H
+#define {{ synapseName.upper() }}_H
+#include <cmath>
+#include "cuda_error.h"
+#include "ngpu_exception.h"
+#include "syn_model.h"
+#include <config.h>
+#include <iostream>
+#include <stdio.h>
+
+namespace {{ synapseName }}_ns
+{
+enum ParamIndexes
+{
+{%- for variable_symbol in synapse.get_parameter_symbols() %}
+{%-     set variable = utils.get_parameter_variable_by_name(astnode, variable_symbol.get_symbol_name()) %}
+  i_{{ printer_no_origin.print(variable) }},
+{%- endfor %}
+  N_PARAM
+};
+
+const std::string {{ synapseName }}_param_name[ N_PARAM ] = {
+{%- for variable_symbol in synapse.get_parameter_symbols() %}
+{%-     set variable = utils.get_parameter_variable_by_name(astnode, variable_symbol.get_symbol_name()) %}
+  "{{ printer_no_origin.print(variable) }}",
+{%- endfor %}
+};
+
+class {{ synapseName }} : public SynModel
+{
+  int _Init();
+
+public:
+    {{ synapseName }}()
+  {
+    _Init();
+  }
+
+  int
+  Init()
+  {
+    return _Init();
+  }
+};
+
+int
+{{ synapseName }}::_Init()
+{
+  type_ = i_{{ synapseName }}_model;
+  n_param_ = N_PARAM;
+  param_name_ = {{ synapseName }}_param_name;
+  CUDAMALLOCCTRL( "&d_param_arr_", &d_param_arr_, n_param_ * sizeof( float ) );
+{%- for variable_symbol in synapse.get_parameter_symbols() %}
+{%-     set variable = utils.get_parameter_variable_by_name(astnode, variable_symbol.get_symbol_name()) %}
+    SetParam("{{ printer_no_origin.print(variable) }}", {{printer_no_origin.print(variable_symbol.get_declaring_expression())}});  // as {{variable_symbol.get_type_symbol().print_symbol()}}
+{%- endfor %}
+
+  return 0;
+}
+
+
+__device__ __forceinline__ void
+    {{ synapseName }}Update( float* weight_pt, float Dt, float* param )
+{
+{#  // printf("Dt: %f\n", Dt);#}
+{#  double tau_plus = param[ i_tau_plus ];#}
+{#  double tau_minus = param[ i_tau_minus ];#}
+{#  double lambda = param[ i_lambda ];#}
+{#  double alpha = param[ i_alpha ];#}
+{#  double mu_plus = param[ i_mu_plus ];#}
+{#  double mu_minus = param[ i_mu_minus ];#}
+{#  double Wmax = param[ i_Wmax ];#}
+{#  // double den_delay = param[i_den_delay];#}
+
+{%- for variable_symbol in synapse.get_state_symbols() %}
+{#{%-     set variable = utils.get_state_variable_by_name(astnode, variable_symbol.get_symbol_name()) %}#}
+{#    SetParam("{{ printer_no_origin.print(variable) }}", {{variable_symbol.get_declaring_expression()}});  // as {{variable_symbol.get_type_symbol().print_symbol()}}#}
+{%-     if variable_symbol.get_symbol_name() == synapse_weight_variable %}
+    double w = *weight_pt;
+{%-     else %}
+    double {{ variable_symbol.get_symbol_name() }} = {{ variable_symbol.get_declaring_expression() }};
+{%-     endif  %}
+{%- endfor %}
+
+{#  double w1;#}
+  // Dt += den_delay;
+  if ( Dt >= 0 ) // post spikes block
+  {
+{#    double fact = lambda * exp( -( double ) Dt / tau_plus );#}
+{#    w1 = w + fact * Wmax * pow( 1.0 - w / Wmax, mu_plus );#}
+{%- filter indent(4, True) %}
+{%- if post_ports is defined %}
+{%-     for post_port in spiking_post_ports %}
+{%-         set dynamics = synapse.get_on_receive_block(post_port) %}
+{%-         if dynamics is not none %}
+/**
+ *  NESTML generated onReceive code block for postsynaptic port "{{ post_port }}" begins here!
+**/
+
+{%-             with ast = dynamics.get_stmts_body() %}
+{%-                 include "directives/StmtsBody.jinja2" %}
+{%-             endwith %}
+{%-         endif %}
+{%-     endfor %}
+{%- endif %}
+{%- endfilter %}
+
+  }
+  else // pre-spikes block
+  {
+{#    double fact = -alpha * lambda * exp( ( double ) Dt / tau_minus );#}
+{#    w1 = w + fact * Wmax * pow( w / Wmax, mu_minus );#}
+{%- for pre_port in pre_ports %}
+
+      /**
+       *  NESTML generated onReceive code block for presynaptic port "{{ pre_port }}" begins here!
+      **/
+{%      if synapse.get_on_receive_block(pre_port) %}
+{%-         set dynamics = synapse.get_on_receive_block(pre_port) %}
+{%-         with ast = dynamics.get_stmts_body() %}
+{%-             filter indent(4, True) %}
+{%-                 include "directives/StmtsBody.jinja2" %}
+{%-             endfilter %}
+{%-         endwith %}
+{%-     endif %}
+{%- endfor %}
+  }
+
+{#  w1 = w1 > 0.0 ? w1 : 0.0;#}
+{#  w1 = w1 < Wmax ? w1 : Wmax;#}
+  *weight_pt = ( float ) w;
+}
+} // namespace {{ synapseName }}_ns
+
+#endif
