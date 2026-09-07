@@ -34,6 +34,7 @@ from pynestml.codegeneration.printers.nest_gpu_numeric_variable_printer import N
 from pynestml.codegeneration.printers.nest_gpu_variable_printer import NESTGPUVariablePrinter
 from pynestml.codegeneration.printers.unitless_c_simple_expression_printer import UnitlessCSimpleExpressionPrinter
 from pynestml.meta_model.ast_model import ASTModel
+from pynestml.utils.ast_utils import ASTUtils
 from pynestml.utils.logger import LoggingLevel, Logger
 from pynestml.codegeneration.nest_code_generator import NESTCodeGenerator
 from pynestml.frontend.frontend_configuration import FrontendConfiguration
@@ -267,6 +268,18 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
                                      synapse: ASTModel,
                                      metadata: Dict[str, Dict[str, Any]]) -> Dict:
         namespace = super()._get_synapse_model_namespace(synapse, metadata)
+        synapse_name_stripped = synapse.get_name().split("__with_")[0]
+        namespace["synapseName"] = synapse_name_stripped
+
+        # Get pre- and post- onReceive block statements
+        pre_spike_weight_stmts, pre_spike_block_stmts = ASTUtils.separate_stmts_with_weight_var_from_on_receive_block(synapse, namespace["pre_ports"], namespace["weight_variable"])
+        post_spike_weight_stmts, post_spike_block_stmts = ASTUtils.separate_stmts_with_weight_var_from_on_receive_block(synapse, namespace["post_ports"], namespace["weight_variable"])
+
+        namespace["pre_spike_weight_stmts"] = pre_spike_weight_stmts
+        namespace["pre_spike_block_stmts"] = pre_spike_block_stmts
+
+        namespace["post_spike_weight_stmts"] = post_spike_weight_stmts
+        namespace["post_spike_block_stmts"] = post_spike_block_stmts
 
         return namespace
 

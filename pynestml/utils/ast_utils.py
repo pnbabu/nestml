@@ -368,7 +368,8 @@ class ASTUtils:
         """
         vector_parameter = variable.get_vector_parameter()
         if vector_parameter.is_variable():
-            symbol = vector_parameter.get_scope().resolve_to_symbol(vector_parameter.get_variable().get_complete_name(), SymbolKind.VARIABLE)
+            symbol = vector_parameter.get_scope().resolve_to_symbol(vector_parameter.get_variable().get_complete_name(),
+                                                                    SymbolKind.VARIABLE)
             return symbol.get_declaring_expression().get_numeric_literal()
 
         assert vector_parameter.is_numeric_literal()
@@ -555,7 +556,8 @@ class ASTUtils:
         return False
 
     @classmethod
-    def get_declaration_by_name(cls, blocks: Union[ASTStmtsBody, List[ASTStmtsBody]], var_name: str) -> Optional[ASTDeclaration]:
+    def get_declaration_by_name(cls, blocks: Union[ASTStmtsBody, List[ASTStmtsBody]], var_name: str) -> Optional[
+        ASTDeclaration]:
         """
         Get a declaration by variable name.
         :param blocks: the block or blocks to look for the variable in
@@ -598,10 +600,10 @@ class ASTUtils:
                 return
 
             if not suffix in var.get_name() \
-               and var.get_name() not in PredefinedVariables.get_variables().keys() \
-               and (var_name is None or var.get_name() == var_name):
+                    and var.get_name() not in PredefinedVariables.get_variables().keys() \
+                    and (var_name is None or var.get_name() == var_name):
                 symbol = scope.resolve_to_symbol(var.get_name(), SymbolKind.VARIABLE)
-                if symbol:    # make sure it is not a unit (like "ms")
+                if symbol:  # make sure it is not a unit (like "ms")
                     var.set_name(var.get_name() + suffix)
 
         astnode.accept(ASTHigherOrderVisitor(lambda x: replace_var(x)))
@@ -626,12 +628,15 @@ class ASTUtils:
         for var_name in analytic_state_variables_moved:
             node = ASTUtils.get_variable_by_name(astnode, var_name)
             assert node is not None
-            expressions.append(ASTNodeFactory.create_ast_expression(False, None, False, ASTNodeFactory.create_ast_simple_expression(variable=node)))
+            expressions.append(ASTNodeFactory.create_ast_expression(False, None, False,
+                                                                    ASTNodeFactory.create_ast_simple_expression(
+                                                                        variable=node)))
 
         return expressions
 
     @classmethod
-    def add_suffix_to_variable_names(cls, astnode: Union[ASTNode, List], suffix: str, altscope: Optional[Scope] = None, variable_names: Optional[List[str]] = None):
+    def add_suffix_to_variable_names(cls, astnode: Union[ASTNode, List], suffix: str, altscope: Optional[Scope] = None,
+                                     variable_names: Optional[List[str]] = None):
         r"""Add suffix to variable names recursively throughout ``astnode``. Symbols will be resolved in the variable's default scope, unless ``altscope`` is set, in which case it will be used to try to resolve variables (this can be used in case of moved variables for neuron/synapse co-generation).
 
         If ``variable_names`` is provided, only add suffix to those variables in the list.
@@ -656,10 +661,10 @@ class ASTUtils:
                 return
 
             if (variable_names is None or var.get_name() in variable_names) \
-               and var.get_name() not in PredefinedVariables.get_variables().keys() \
-               and not var.get_name().endswith(suffix):
+                    and var.get_name() not in PredefinedVariables.get_variables().keys() \
+                    and not var.get_name().endswith(suffix):
                 symbol = scope.resolve_to_symbol(var.get_name(), SymbolKind.VARIABLE)
-                if symbol:    # make sure it is not a unit (like "ms")
+                if symbol:  # make sure it is not a unit (like "ms")
                     var.set_name(var.get_name() + suffix)
 
         astnode.accept(ASTHigherOrderVisitor(lambda x: replace_var(x)))
@@ -683,7 +688,7 @@ class ASTUtils:
 
             if not var.get_name() in PredefinedVariables.get_variables().keys():
                 symbol = new_scope.resolve_to_symbol(var.get_name(), SymbolKind.VARIABLE)
-                if symbol:    # make sure it is not a unit (like "ms")
+                if symbol:  # make sure it is not a unit (like "ms")
                     var.update_scope(new_scope)
 
         astnode.accept(ASTHigherOrderVisitor(lambda x: replace_var(x)))
@@ -719,8 +724,9 @@ class ASTUtils:
         for pair in codegen_opts_pairs:
             if pair["neuron"] == removesuffix(neuron.get_name().split("__with_")[0], FrontendConfiguration.suffix):
                 for synapse_name, syn_opts in pair["synapses"].items():
-                    if synapse_name == removesuffix(synapse.get_name().split("__with_")[0], FrontendConfiguration.suffix) \
-                       and "post_ports" in syn_opts.keys():
+                    if synapse_name == removesuffix(synapse.get_name().split("__with_")[0],
+                                                    FrontendConfiguration.suffix) \
+                            and "post_ports" in syn_opts.keys():
                         return syn_opts["post_ports"]
 
         return []
@@ -825,7 +831,9 @@ class ASTUtils:
         return all_variables
 
     @classmethod
-    def get_all_variables_affected_by_convolutions(cls, nodes: Union[ASTEquationsBlock, List[ASTEquationsBlock]], parent_node: ASTNode, excluded_port_names: Optional[List[str]] = None) -> Set[str]:
+    def get_all_variables_affected_by_convolutions(cls, nodes: Union[ASTEquationsBlock, List[ASTEquationsBlock]],
+                                                   parent_node: ASTNode,
+                                                   excluded_port_names: Optional[List[str]] = None) -> Set[str]:
         r"""Gather all variables that are affected by a convolution with an input port that is not in ``excluded_port_names``."""
 
         if excluded_port_names is None:
@@ -850,7 +858,8 @@ class ASTUtils:
                 func_name = node.get_name()
                 if func_name == PredefinedFunctions.CONVOLVE:
                     symbol_buffer = node.get_scope().resolve_to_symbol(str(node.get_args()[1]), SymbolKind.VARIABLE)
-                    input_port = ASTUtils.get_input_port_by_name(self.parent_node.get_input_blocks(), symbol_buffer.name)
+                    input_port = ASTUtils.get_input_port_by_name(self.parent_node.get_input_blocks(),
+                                                                 symbol_buffer.name)
                     if input_port and input_port.name not in self.excluded_port_names:
                         node_ = node
                         var_name = None
@@ -878,7 +887,8 @@ class ASTUtils:
         return variables
 
     @classmethod
-    def move_decls(cls, var_name, from_block, to_block, var_name_suffix: str, block_type: BlockType, mode="move") -> List[ASTDeclaration]:
+    def move_decls(cls, var_name, from_block, to_block, var_name_suffix: str, block_type: BlockType, mode="move") -> \
+    List[ASTDeclaration]:
         r"""Move or copy declarations from ``from_block`` to ``to_block``."""
         from pynestml.visitors.ast_symbol_table_visitor import ASTSymbolTableVisitor
         assert mode in ["move", "copy"]
@@ -886,7 +896,7 @@ class ASTUtils:
         ret = []
 
         if not from_block \
-           or not to_block:
+                or not to_block:
             return []
 
         decls = ASTUtils.get_declarations_from_block(var_name, from_block)
@@ -907,7 +917,8 @@ class ASTUtils:
 
                 # add suffix to the vector parameter in case this variable is a vector
                 if decl.get_variables()[0].get_vector_parameter():
-                    vec_var = decl.get_variables()[0].get_vector_parameter().get_variable()    # the part between the square parentheses
+                    vec_var = decl.get_variables()[
+                        0].get_vector_parameter().get_variable()  # the part between the square parentheses
                     if vec_var is not None:
                         assert isinstance(vec_var, ASTVariable)
                         vec_var.name = vec_var.name + var_name_suffix
@@ -932,7 +943,8 @@ class ASTUtils:
         return ret
 
     @classmethod
-    def equations_from_block_to_block(cls, state_var, from_block, to_block, var_name_suffix, mode) -> List[ASTDeclaration]:
+    def equations_from_block_to_block(cls, state_var, from_block, to_block, var_name_suffix, mode) -> List[
+        ASTDeclaration]:
         assert mode in ["move", "copy"]
 
         ret = []
@@ -964,7 +976,7 @@ class ASTUtils:
         if decls:
             for decl in decls:
                 if (type(decl) in [ASTDeclaration, ASTReturnStmt] and decl.has_expression()) \
-                   or type(decl) is ASTInlineExpression:
+                        or type(decl) is ASTInlineExpression:
                     vars_used.extend(
                         ASTUtils.collect_variable_names_in_expression(decl.get_expression()))
                 elif type(decl) is ASTOdeEquation:
@@ -996,7 +1008,8 @@ class ASTUtils:
 
                 if existing_symbol is None:
                     code, message = Messages.get_no_variable_found(var.get_name_of_lhs())
-                    Logger.log_message(code=code, message=message, error_position=kernel.get_source_position(), log_level=LoggingLevel.ERROR)
+                    Logger.log_message(code=code, message=message, error_position=kernel.get_source_position(),
+                                       log_level=LoggingLevel.ERROR)
                     return
 
                 existing_symbol.set_ode_or_kernel(expr)
@@ -1047,8 +1060,8 @@ class ASTUtils:
         stmts = []
         for node in all_stmts:
             if node.is_small_stmt() \
-               and node.small_stmt.is_assignment() \
-               and node.small_stmt.get_assignment().lhs.get_name() == var_name:
+                    and node.small_stmt.is_assignment() \
+                    and node.small_stmt.get_assignment().lhs.get_name() == var_name:
                 stmts.append(node)
         return stmts
 
@@ -1090,7 +1103,8 @@ class ASTUtils:
         return delay_parameter.get_name()
 
     @classmethod
-    def update_delay_parameter_in_state_vars(cls, neuron: ASTModel, state_vars_before_update: List[VariableSymbol]) -> None:
+    def update_delay_parameter_in_state_vars(cls, neuron: ASTModel,
+                                             state_vars_before_update: List[VariableSymbol]) -> None:
         """
         Updates the delay parameter in state variables after the symbol table update
         :param neuron: AST neuron
@@ -1122,11 +1136,13 @@ class ASTUtils:
         :param declarations: a map of variable names to declarations
         """
         for i, variable in enumerate(declarations):
-            run_symboltable_visitor: bool = i == len(declarations) - 1    # only on the last iteration
-            cls.add_declaration_to_internals(model, variable, declarations[variable], run_symboltable_visitor=run_symboltable_visitor)
+            run_symboltable_visitor: bool = i == len(declarations) - 1  # only on the last iteration
+            cls.add_declaration_to_internals(model, variable, declarations[variable],
+                                             run_symboltable_visitor=run_symboltable_visitor)
 
     @classmethod
-    def add_declaration_to_internals(cls, model: ASTModel, variable_name: str, init_expression: str, run_symboltable_visitor: bool = True) -> None:
+    def add_declaration_to_internals(cls, model: ASTModel, variable_name: str, init_expression: str,
+                                     run_symboltable_visitor: bool = True) -> None:
         """
         Adds the variable as stored in the declaration tuple to the model. The declared variable is of type real.
         :param model: a single model instance
@@ -1171,7 +1187,8 @@ class ASTUtils:
         return neuron
 
     @classmethod
-    def add_declaration_to_state_block(cls, neuron: ASTModel, variable: str, initial_value: str, type_str: str = "real") -> ASTModel:
+    def add_declaration_to_state_block(cls, neuron: ASTModel, variable: str, initial_value: str,
+                                       type_str: str = "real") -> ASTModel:
         """
         Adds a single declaration to an arbitrary state block of the neuron. The declared variable is of type real.
         :param neuron: a neuron
@@ -1431,7 +1448,8 @@ class ASTUtils:
             if spike_input_port.has_vector_parameter():
                 spike_input_port_name += "__VEC_IDX__" + str(cls.get_numeric_vector_size(spike_input_port))
 
-        return kernel_var_name.replace("$", "__DOLLAR") + suffix + "__X__" + spike_input_port_name + diff_order_symbol * order + suffix
+        return kernel_var_name.replace("$",
+                                       "__DOLLAR") + suffix + "__X__" + spike_input_port_name + diff_order_symbol * order + suffix
 
     @classmethod
     def replace_rhs_variable(cls, expr: ASTExpression, variable_name_to_replace: str, kernel_var: ASTVariable,
@@ -1444,6 +1462,7 @@ class ASTUtils:
         :param spike_buf: input port instance
         :return:
         """
+
         def replace_kernel_var(node):
             if type(node) is ASTSimpleExpression \
                     and node.is_variable() \
@@ -1504,12 +1523,15 @@ class ASTUtils:
             expr = kernel
 
         rhs_is_delta_kernel = type(expr) is ASTSimpleExpression \
-            and expr.is_function_call() \
-            and expr.get_function_call().get_scope().resolve_to_symbol(expr.get_function_call().get_name(), SymbolKind.FUNCTION).equals(PredefinedFunctions.name2function["delta"])
+                              and expr.is_function_call() \
+                              and expr.get_function_call().get_scope().resolve_to_symbol(
+            expr.get_function_call().get_name(), SymbolKind.FUNCTION).equals(PredefinedFunctions.name2function["delta"])
         rhs_is_multiplied_delta_kernel = type(expr) is ASTExpression \
-            and type(expr.get_rhs()) is ASTSimpleExpression \
-            and expr.get_rhs().is_function_call() \
-            and expr.get_rhs().get_function_call().get_scope().resolve_to_symbol(expr.get_rhs().get_function_call().get_name(), SymbolKind.FUNCTION).equals(PredefinedFunctions.name2function["delta"])
+                                         and type(expr.get_rhs()) is ASTSimpleExpression \
+                                         and expr.get_rhs().is_function_call() \
+                                         and expr.get_rhs().get_function_call().get_scope().resolve_to_symbol(
+            expr.get_rhs().get_function_call().get_name(), SymbolKind.FUNCTION).equals(
+            PredefinedFunctions.name2function["delta"])
         return rhs_is_delta_kernel or rhs_is_multiplied_delta_kernel
 
     @classmethod
@@ -1661,7 +1683,8 @@ class ASTUtils:
     def replace_post_moved_variable_names(cls, astnode, post_connected_continuous_input_ports, post_variable_names):
         if not isinstance(astnode, ASTNode):
             for node in astnode:
-                ASTUtils.replace_post_moved_variable_names(node, post_connected_continuous_input_ports, post_variable_names)
+                ASTUtils.replace_post_moved_variable_names(node, post_connected_continuous_input_ports,
+                                                           post_variable_names)
             return
 
         def replace_var(_expr=None):
@@ -1683,7 +1706,8 @@ class ASTUtils:
         r"""In the synapse, continuous-valued input ports could be referred to based on their name. When they are moved to the neuron, they need to be referred to by the variable name as it exists on the neuron side. This function performs the variable name replacement recursively in ``astnode``. ``astnode`` can also be a list of nodes."""
         if not isinstance(astnode, ASTNode):
             for node in astnode:
-                ASTUtils.replace_post_moved_variable_names(node, post_connected_continuous_input_ports, post_variable_names)
+                ASTUtils.replace_post_moved_variable_names(node, post_connected_continuous_input_ports,
+                                                           post_variable_names)
             return
 
         def replace_var(_expr=None):
@@ -1885,8 +1909,10 @@ class ASTUtils:
     @classmethod
     def get_necessary_variables(cls, var: str, model: ASTExpression) -> List[ASTVariable]:
         r"""Return a list of all right-hand side variables in the model that a certain, given left-hand side variable ``var`` depends on."""
+
         class GetNecessaryVariablesVisitor(ASTVisitor):
             r"""N.B. use get_name() rather than get_complete_name() so we grab higher orders as well"""
+
             def __init__(self):
                 super().__init__()
                 self.vars = set()
@@ -1924,6 +1950,7 @@ class ASTUtils:
     @classmethod
     def get_dependent_variables(cls, var: str, model: ASTNode) -> Set[str]:
         r"""Return a set of all left-hand side variables in the model that depend on ``var`` in their right-hand side."""
+
         class GetDependentVariablesVisitor(ASTVisitor):
             def __init__(self):
                 super().__init__()
@@ -1944,7 +1971,8 @@ class ASTUtils:
             def visit_kernel(self, node: ASTKernel) -> None:
                 for expr in node.get_expressions():
                     # exclude the special case "t" because a function-of-time kernel might depend on t
-                    if not var == PredefinedVariables.TIME_CONSTANT and var in ASTUtils.get_all_variables_names_in_expression(expr):
+                    if not var == PredefinedVariables.TIME_CONSTANT and var in ASTUtils.get_all_variables_names_in_expression(
+                            expr):
                         self.vars |= set([var.get_name() for var in node.get_variables()])
 
             def visit_assignment(self, node: ASTAssignment) -> None:
@@ -1977,6 +2005,7 @@ class ASTUtils:
     def get_all_variables_in_expression(cls, expr: ASTExpression) -> List[ASTVariable]:
         r"""
         """
+
         class GetAllVariablesVisitor(ASTVisitor):
             def __init__(self):
                 super().__init__()
@@ -2063,7 +2092,8 @@ class ASTUtils:
                 self._visit(node)
 
             def _visit(self, node):
-                if node.is_function_call() and node.get_function_call().get_name() == PredefinedFunctions.INTEGRATE_ODES and not any([call.equals(node.get_function_call()) for call in self.calls]):
+                if node.is_function_call() and node.get_function_call().get_name() == PredefinedFunctions.INTEGRATE_ODES and not any(
+                        [call.equals(node.get_function_call()) for call in self.calls]):
                     self.calls.append(node.get_function_call())
 
         visitor = IntegrateODEsFunctionCallVisitor()
@@ -2072,7 +2102,8 @@ class ASTUtils:
         return visitor.calls
 
     @classmethod
-    def create_initial_values_for_kernels(cls, model: ASTModel, solver_dicts: List[Dict], kernels: List[ASTKernel]) -> None:
+    def create_initial_values_for_kernels(cls, model: ASTModel, solver_dicts: List[Dict],
+                                          kernels: List[ASTKernel]) -> None:
         r"""
         Add the variables used in kernels from the ode-toolbox result dictionary as ODEs in NESTML AST
         """
@@ -2101,13 +2132,14 @@ class ASTUtils:
                         if differential_order:
                             type_str = "(s**-" + str(differential_order) + ")"
 
-                    expr = "0 " + type_str    # for kernels, "initial value" returned by ode-toolbox is actually the increment value; the actual initial value is 0 (property of the convolution)
+                    expr = "0 " + type_str  # for kernels, "initial value" returned by ode-toolbox is actually the increment value; the actual initial value is 0 (property of the convolution)
                     if not cls.declaration_in_state_block(model, var_name):
                         cls.add_declaration_to_state_block(model, var_name, expr, type_str)
 
     @classmethod
     def transform_ode_and_kernels_to_json(cls, model: ASTModel, parameters_blocks: Sequence[ASTBlockWithVariables],
-                                          kernel_buffers: Mapping[ASTKernel, ASTInputPort], printer: ASTPrinter, include_ODEs: bool = True) -> Dict:
+                                          kernel_buffers: Mapping[ASTKernel, ASTInputPort], printer: ASTPrinter,
+                                          include_ODEs: bool = True) -> Dict:
         """
         Converts AST node to a JSON representation suitable for passing to ode-toolbox.
 
@@ -2225,6 +2257,7 @@ class ASTUtils:
         """
         Replace all occurrences of kernel names (e.g. ``I_dend`` and ``I_dend'`` for a definition involving a second-order kernel ``inline kernel I_dend = convolve(kern_name, spike_buf)``) with the ODE-toolbox generated variable ``kern_name__X__spike_buf``.
         """
+
         def replace_var(_expr, replace_var_name: str, replace_with_var_name: str):
             if isinstance(_expr, ASTSimpleExpression) and _expr.is_variable():
                 var = _expr.get_variable()
@@ -2262,6 +2295,7 @@ class ASTUtils:
 
         Variables aliasing convolutions should already have been covered by replace_convolution_aliasing_inlines().
         """
+
         def replace_var(_expr=None):
             if isinstance(_expr, ASTSimpleExpression) and _expr.is_variable():
                 var = _expr.get_variable()
@@ -2441,10 +2475,12 @@ class ASTUtils:
         return rport_to_port_map
 
     @classmethod
-    def assign_numeric_non_numeric_state_variables(cls, model, numeric_state_variable_names, numeric_update_expressions, update_expressions, metadata):
+    def assign_numeric_non_numeric_state_variables(cls, model, numeric_state_variable_names, numeric_update_expressions,
+                                                   update_expressions, metadata):
         r"""For each ASTVariable, set the ``node._is_numeric`` member to True or False based on whether this variable will be solved with the analytic or numeric solver.
 
         Ideally, this would not be a property of the ASTVariable as it is an implementation detail (that only emerges during code generation) and not an intrinsic part of the model itself. However, this approach is preferred over setting it as a property of the variable printers as it would have to make each printer aware of all models and variables therein."""
+
         class ASTVariableOriginSetterVisitor(ASTVisitor):
             def visit_variable(self, node):
                 assert isinstance(node, ASTVariable)
@@ -2497,7 +2533,8 @@ class ASTUtils:
                 update_expr.accept(visitor)
 
         if "equations_with_delay_vars" in metadata[model.name].keys():
-            for node in metadata[model.name]["equations_with_delay_vars"] + metadata[model.name]["equations_with_vector_vars"]:
+            for node in metadata[model.name]["equations_with_delay_vars"] + metadata[model.name][
+                "equations_with_vector_vars"]:
                 node.accept(visitor)
 
     @classmethod
@@ -2517,7 +2554,7 @@ class ASTUtils:
 
         for var_name in visitor.var_names:
             symbol = expr.get_scope().resolve_to_symbol(var_name, SymbolKind.VARIABLE)
-            if not symbol:    # ignore variables that are actually units (like "ms")
+            if not symbol:  # ignore variables that are actually units (like "ms")
                 continue
 
             if not var_name in var_names:
@@ -2555,11 +2592,12 @@ class ASTUtils:
         return None
 
     @classmethod
-    def collect_variables_affected_by_ports(cls, model, post_port_names, strictly_synaptic_vars: Optional[Set[str]] = None):
+    def collect_variables_affected_by_ports(cls, model, post_port_names,
+                                            strictly_synaptic_vars: Optional[Set[str]] = None):
         r"""Recursively collect a list of all variables in a model that are affected by spikes from ``post_port_names``. These variables are marked for moving to the postsynaptic neuron. If a variable is to strictly remain part of the synapse, it should be passed in ``strictly_synaptic_vars``."""
         if strictly_synaptic_vars is None:
             strictly_synaptic_vars: Set[str] = set()
-        strictly_synaptic_vars = set(strictly_synaptic_vars)    # make a copy
+        strictly_synaptic_vars = set(strictly_synaptic_vars)  # make a copy
         strictly_synaptic_vars.add(PredefinedVariables.TIME_CONSTANT)
 
         #
@@ -2577,20 +2615,24 @@ class ASTUtils:
         for input_block in model.get_input_blocks():
             for port in input_block.get_input_ports():
                 if port.name not in post_port_names:
-                    strictly_synaptic_vars |= ASTUtils.get_all_variables_assigned_to(model.get_on_receive_block(port.name))
+                    strictly_synaptic_vars |= ASTUtils.get_all_variables_assigned_to(
+                        model.get_on_receive_block(port.name))
 
         # exclude all variables that are assigned to in the ``update`` block
         for update_block in model.get_update_blocks():
             strictly_synaptic_vars |= ASTUtils.get_all_variables_assigned_to(update_block)
 
         # exclude convolutions if they are not with a postsynaptic variable
-        convolve_with_not_post_vars = ASTUtils.get_all_variables_affected_by_convolutions(model.get_equations_blocks(), model, excluded_port_names=post_port_names)
+        convolve_with_not_post_vars = ASTUtils.get_all_variables_affected_by_convolutions(model.get_equations_blocks(),
+                                                                                          model,
+                                                                                          excluded_port_names=post_port_names)
 
         # exclude all variables that depend on the ones that are not to be moved
         strictly_synaptic_vars_dependent = ASTUtils.recursive_dependent_variables_search(strictly_synaptic_vars, model)
 
         # do set subtraction
-        syn_to_neuron_state_vars = list(set(all_state_vars) - (strictly_synaptic_vars | set(convolve_with_not_post_vars) | set(strictly_synaptic_vars_dependent)))
+        syn_to_neuron_state_vars = list(set(all_state_vars) - (
+                    strictly_synaptic_vars | set(convolve_with_not_post_vars) | set(strictly_synaptic_vars_dependent)))
 
         #
         #   collect all the variable/parameter/kernel/function/etc. names used in defining expressions of `syn_to_neuron_state_vars`
@@ -2601,7 +2643,9 @@ class ASTUtils:
         # all state variables that will be moved from synapse to neuron
         syn_to_neuron_state_vars = []
         for var_name in recursive_vars_used:
-            if ASTUtils.get_state_variable_by_name(model, var_name) or ASTUtils.get_inline_expression_by_name(model, var_name) or ASTUtils.get_kernel_by_name(model, var_name):
+            if ASTUtils.get_state_variable_by_name(model, var_name) or ASTUtils.get_inline_expression_by_name(model,
+                                                                                                              var_name) or ASTUtils.get_kernel_by_name(
+                    model, var_name):
                 syn_to_neuron_state_vars.append(var_name)
 
         return recursive_vars_used, syn_to_neuron_state_vars
@@ -2609,14 +2653,16 @@ class ASTUtils:
     @classmethod
     def get_all_variables_assigned_to(cls, node: ASTNode) -> Set[str]:
         r"""Return a list of all variables that are assigned to in ``node``."""
+
         class ASTAssignedToVariablesFinderVisitor(ASTVisitor):
             def __init__(self):
                 super().__init__()
                 self._variable_names = set()
 
             def visit_assignment(self, node):
-                symbol = node.get_scope().resolve_to_symbol(node.get_variable().get_complete_name(), SymbolKind.VARIABLE)
-                assert symbol is not None    # should have been checked in a CoCo before
+                symbol = node.get_scope().resolve_to_symbol(node.get_variable().get_complete_name(),
+                                                            SymbolKind.VARIABLE)
+                assert symbol is not None  # should have been checked in a CoCo before
                 self._variable_names.add(node.get_variable().get_name())
 
         if node is None:
@@ -2639,7 +2685,7 @@ class ASTUtils:
         else:
             all_declared_params = []
 
-        all_declared_params = sum(all_declared_params, [])    # flatten
+        all_declared_params = sum(all_declared_params, [])  # flatten
         all_declared_params = [var.name for var in all_declared_params]
 
         recursive_vars_used = ASTUtils.recursive_necessary_variables_search(syn_to_neuron_state_vars, model)
@@ -2730,3 +2776,22 @@ class ASTUtils:
     @classmethod
     def is_else_clause(cls, node):
         return isinstance(node, ASTElseClause)
+
+    @classmethod
+    def separate_stmts_with_weight_var_from_on_receive_block(cls, synapse: ASTModel, port_names: Sequence[str],
+                                                             weight_var_name: str) -> tuple[List[Any], List[Any]]:
+        stmts_without_weight_var = []
+        stmts_with_weight_var = []
+        for port_name in port_names:
+            blocks = cls.get_on_receive_blocks_by_input_port_name(synapse, port_name)
+            for block in blocks:
+                stmts = block.get_stmts_body().get_stmts()
+                for stmt in stmts:
+                    if stmt.is_small_stmt() \
+                       and stmt.small_stmt.is_assignment():
+                        if stmt.small_stmt.get_assignment().get_variable().get_complete_name() != weight_var_name:
+                            stmts_without_weight_var.append(stmt)
+                        else:
+                            stmts_with_weight_var.append(stmt)
+
+        return stmts_with_weight_var, stmts_without_weight_var
