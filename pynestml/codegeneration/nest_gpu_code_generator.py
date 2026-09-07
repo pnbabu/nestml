@@ -282,4 +282,3 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
         namespace["post_spike_block_stmts"] = post_spike_block_stmts
 
         return namespace
-
