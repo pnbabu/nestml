@@ -1,6 +1,7 @@
-# -*- coding: utf-8 -*-
+# Model for testing the integrate_odes() function.
 #
-# __init__.py
+# Copyright statement
+# +++++++++++++++++++
 #
 # This file is part of NEST.
 #
@@ -18,17 +19,18 @@
 #
 # You should have received a copy of the GNU General Public License
 # along with NEST.  If not, see <http://www.gnu.org/licenses/>.
+#
+model integrate_odes_test_spikes:
+    state:
+        x real = 0.
+        do_integrate_odes boolean = true
 
-__version__ = "9.0.0"
+    equations:
+        x' = -x / (1E99 ms) + spikes_in_port
 
-__all__ = ["cocos",
-           "codegeneration",
-           "exceptions",
-           "frontend",
-           "generated",
-           "meta_model",
-           "symbols",
-           "symbol_table",
-           "transformers",
-           "utils",
-           "visitors"]
+    input:
+        spikes_in_port <- spike
+
+    update:
+        if do_integrate_odes:
+            integrate_odes(x)
