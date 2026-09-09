@@ -272,8 +272,8 @@ class NESTGPUCodeGenerator(NESTCodeGenerator):
         namespace["synapseName"] = synapse_name_stripped
 
         # Get pre- and post- onReceive block statements
-        pre_spike_weight_stmts, pre_spike_block_stmts = ASTUtils.separate_stmts_with_weight_var_from_on_receive_block(synapse, namespace["pre_ports"], namespace["weight_variable"])
-        post_spike_weight_stmts, post_spike_block_stmts = ASTUtils.separate_stmts_with_weight_var_from_on_receive_block(synapse, namespace["post_ports"], namespace["weight_variable"])
+        pre_spike_weight_stmts, pre_spike_block_stmts = ASTUtils.separate_stmts_with_weight_var_from_on_receive_block(synapse, namespace["pre_ports"], namespace["synapse_weight_variable"])
+        post_spike_weight_stmts, post_spike_block_stmts = ASTUtils.separate_stmts_with_weight_var_from_on_receive_block(synapse, namespace["post_ports"], namespace["synapse_weight_variable"])
 
         namespace["pre_spike_weight_stmts"] = pre_spike_weight_stmts
         namespace["pre_spike_block_stmts"] = pre_spike_block_stmts
